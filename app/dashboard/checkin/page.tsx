@@ -84,7 +84,7 @@ export default function CheckinPage() {
           plusOne: guest.plusOneCount || 0,
         };
         setSimulatedScan(newRecord);
-        setScansList([newRecord, ...scansList]);
+        setScansList((prev) => [newRecord, ...prev]);
         setTokenInput("");
       } else {
         const isDuplicate = json.error?.code === "ALREADY_CHECKED_IN" || json.error?.message?.includes("ALREADY");
@@ -100,7 +100,7 @@ export default function CheckinPage() {
             plusOne: guest?.plusOneCount || 0,
           };
           setDuplicateWarning(json);
-          setScansList([dupRecord, ...scansList]);
+          setScansList((prev) => [dupRecord, ...prev]);
         } else {
           alert(json.error?.message || "QR Code non reconnu dans la base des invités");
         }

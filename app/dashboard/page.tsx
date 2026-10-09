@@ -132,7 +132,7 @@ export default function DashboardOverviewPage() {
       time: "À l'instant",
     };
 
-    setGuests([newGuest, ...guests]);
+    setGuests((prev) => [newGuest, ...prev]);
     setNewName("");
     setNewPhone("");
     setNewPlusOne(0);
@@ -141,9 +141,16 @@ export default function DashboardOverviewPage() {
     showToast(`Invité "${newGuest.name}" ajouté avec succès !`);
   };
 
+  const [shareUrl, setShareUrl] = useState("https://happyevents.ci/e/ange-anniversaire-30");
+
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      setShareUrl(`${window.location.origin}/e/${event.slug}`);
+    }
+  }, [event.slug]);
+
   const handleCopyLink = () => {
-    const url = `${window.location.origin}/e/${event.slug}`;
-    navigator.clipboard.writeText(url);
+    navigator.clipboard.writeText(shareUrl);
     showToast("Lien de l'invitation copié dans le presse-papier !");
   };
 
@@ -441,7 +448,7 @@ export default function DashboardOverviewPage() {
         >
           <div className="space-y-4 pt-2 text-xs">
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-4 leading-relaxed text-happy-ink-800">
-              « Bonjour ! Tu es cordialement invité(e) aux 30 ans d'Ange le 26 Septembre au Sofitel Hôtel Ivoire. Valide ta présence et obtiens ton QR Code d'entrée ici : http://localhost:3000/e/ange-anniversaire-30 »
+              « Bonjour ! Tu es cordialement invité(e) aux 30 ans d&apos;Ange le 26 Septembre au Sofitel Hôtel Ivoire. Valide ta présence et obtiens ton QR Code d&apos;entrée ici : {shareUrl} »
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 pt-2">
@@ -455,7 +462,7 @@ export default function DashboardOverviewPage() {
               </Button>
               <a
                 href={`https://wa.me/?text=${encodeURIComponent(
-                  "Tu es invité aux 30 ans d'Ange le 26 Septembre au Sofitel Ivoire ! Valide ton invitation ici : http://localhost:3000/e/ange-anniversaire-30"
+                  `Tu es invité aux 30 ans d'Ange le 26 Septembre au Sofitel Ivoire ! Valide ton invitation ici : ${shareUrl}`
                 )}`}
                 target="_blank"
                 rel="noreferrer"

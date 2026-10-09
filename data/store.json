@@ -78,6 +78,23 @@
   ],
   "guests": [
     {
+      "eventId": "evt_30ans_ange",
+      "firstName": "Test",
+      "lastName": "Invite",
+      "phone": "+225 01020304",
+      "email": null,
+      "group": "RSVP Public",
+      "isVip": false,
+      "plusOneAllowed": true,
+      "plusOneCount": 1,
+      "rsvpStatus": "CONFIRMED",
+      "id": "gst_mpyyx5o",
+      "qrToken": "tok_qnsntn5bmk",
+      "checkedIn": true,
+      "createdAt": "2026-10-09T17:22:15.626Z",
+      "updatedAt": "2026-10-09T17:22:21.170Z"
+    },
+    {
       "id": "gst_01",
       "eventId": "evt_30ans_ange",
       "firstName": "Marc-Antoine",
@@ -182,6 +199,16 @@
   ],
   "rsvps": [
     {
+      "eventId": "evt_30ans_ange",
+      "guestId": "gst_mpyyx5o",
+      "status": "CONFIRMED",
+      "attendeeCount": 2,
+      "dietaryPreference": null,
+      "message": null,
+      "id": "rsvp_6th4gbp",
+      "respondedAt": "2026-10-09T17:22:15.629Z"
+    },
+    {
       "id": "rsvp_01",
       "eventId": "evt_30ans_ange",
       "guestId": "gst_01",
@@ -255,6 +282,13 @@
     }
   ],
   "checkins": [
+    {
+      "id": "chk_jirl435",
+      "eventId": "evt_30ans_ange",
+      "guestId": "gst_mpyyx5o",
+      "checkedInAt": "2026-10-09T17:22:21.170Z",
+      "checkedInBy": "agent_01"
+    },
     {
       "id": "chk_01",
       "eventId": "evt_30ans_ange",

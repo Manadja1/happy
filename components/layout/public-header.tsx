@@ -10,7 +10,7 @@ export function PublicHeader() {
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-happy-ink-100/80 bg-white/80 backdrop-blur-md transition-all">
-      <div className="mx-auto flex h-18 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Brand Logo */}
         <Link href="/" className="flex items-center gap-2.5 group">
           <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-happy-coral-500 to-amber-500 text-white shadow-soft group-hover:scale-105 transition-transform duration-200">
@@ -124,7 +124,7 @@ export function PublicHeader() {
               onClick={() => setMobileMenuOpen(false)}
               className="text-base font-semibold text-happy-ink-800 hover:text-happy-coral-600"
             >
-              Modèles d'invitations
+              Modèles d&apos;invitations
             </Link>
             <Link
               href="/pricing"

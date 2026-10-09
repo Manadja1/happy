@@ -65,7 +65,7 @@ export function MobileBottomNav() {
         <div className="relative -top-5">
           <Link
             href="/dashboard/events/new"
-            className="flex h-13 w-13 items-center justify-center rounded-2xl bg-gradient-to-tr from-happy-coral-500 via-happy-coral-600 to-amber-500 text-white shadow-glow active:scale-95 transition-transform"
+            className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-happy-coral-500 via-happy-coral-600 to-amber-500 text-white shadow-glow active:scale-95 transition-transform"
             aria-label="Nouvel événement"
           >
             <Plus className="h-6 w-6 stroke-[2.5]" />

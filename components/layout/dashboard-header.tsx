@@ -59,7 +59,12 @@ export function DashboardHeader() {
 
         {/* Dropdown menu */}
         {eventSwitcherOpen && (
-          <div className="absolute left-0 mt-2 w-72 rounded-2xl border border-happy-ink-100 bg-white p-2 shadow-xl animate-fadeIn z-50">
+          <>
+            <div
+              className="fixed inset-0 z-40"
+              onClick={() => setEventSwitcherOpen(false)}
+            />
+            <div className="absolute left-0 mt-2 w-72 rounded-2xl border border-happy-ink-100 bg-white p-2 shadow-xl animate-fadeIn z-50">
             <div className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-happy-ink-400">
               Événement actif
             </div>
@@ -98,6 +103,7 @@ export function DashboardHeader() {
               </Link>
             </div>
           </div>
+          </>
         )}
       </div>
 
@@ -129,52 +135,58 @@ export function DashboardHeader() {
           </button>
 
           {notificationsOpen && (
-            <div className="absolute right-0 mt-2 w-80 rounded-2xl border border-happy-ink-100 bg-white p-3 shadow-xl animate-fadeIn z-50">
-              <div className="flex items-center justify-between pb-2 border-b border-happy-ink-100 px-1">
-                <span className="text-xs font-bold uppercase tracking-wider text-happy-ink-800">
-                  Notifications récentes
-                </span>
-                <span className="rounded-full bg-happy-coral-100 px-2 py-0.5 text-[10px] font-bold text-happy-coral-700">
-                  3 nouvelles
-                </span>
-              </div>
-
-              <div className="mt-2 space-y-2 text-xs">
-                <div className="p-2 rounded-xl bg-emerald-50/60 border border-emerald-100">
-                  <p className="font-bold text-emerald-950">Nouveau RSVP confirmé !</p>
-                  <p className="text-[11px] text-emerald-800 mt-0.5">
-                    Marc-Antoine Konan a confirmé sa présence (+1).
-                  </p>
-                  <span className="text-[10px] text-emerald-600 mt-1 block">Il y a 15 min</span>
+            <>
+              <div
+                className="fixed inset-0 z-40"
+                onClick={() => setNotificationsOpen(false)}
+              />
+              <div className="absolute right-0 mt-2 w-80 rounded-2xl border border-happy-ink-100 bg-white p-3 shadow-xl animate-fadeIn z-50">
+                <div className="flex items-center justify-between pb-2 border-b border-happy-ink-100 px-1">
+                  <span className="text-xs font-bold uppercase tracking-wider text-happy-ink-800">
+                    Notifications récentes
+                  </span>
+                  <span className="rounded-full bg-happy-coral-100 px-2 py-0.5 text-[10px] font-bold text-happy-coral-700">
+                    3 nouvelles
+                  </span>
                 </div>
 
-                <div className="p-2 rounded-xl bg-happy-sand-50 border border-happy-ink-100">
-                  <p className="font-bold text-happy-ink-900">Billet QR scanné à l'entrée</p>
-                  <p className="text-[11px] text-happy-ink-600 mt-0.5">
-                    Aïcha Traoré a franchi le check-in VIP.
-                  </p>
-                  <span className="text-[10px] text-happy-ink-400 mt-1 block">Il y a 1h</span>
+                <div className="mt-2 space-y-2 text-xs">
+                  <div className="p-2 rounded-xl bg-emerald-50/60 border border-emerald-100">
+                    <p className="font-bold text-emerald-950">Nouveau RSVP confirmé !</p>
+                    <p className="text-[11px] text-emerald-800 mt-0.5">
+                      Marc-Antoine Konan a confirmé sa présence (+1).
+                    </p>
+                    <span className="text-[10px] text-emerald-600 mt-1 block">Il y a 15 min</span>
+                  </div>
+
+                  <div className="p-2 rounded-xl bg-happy-sand-50 border border-happy-ink-100">
+                    <p className="font-bold text-happy-ink-900">Billet QR scanné à l'entrée</p>
+                    <p className="text-[11px] text-happy-ink-600 mt-0.5">
+                      Aïcha Traoré a franchi le check-in VIP.
+                    </p>
+                    <span className="text-[10px] text-happy-ink-400 mt-1 block">Il y a 1h</span>
+                  </div>
+
+                  <div className="p-2 rounded-xl bg-amber-50/60 border border-amber-100">
+                    <p className="font-bold text-amber-950">Rappel automatique suggéré</p>
+                    <p className="text-[11px] text-amber-800 mt-0.5">
+                      8 invités n'ont pas encore répondu sur WhatsApp.
+                    </p>
+                    <span className="text-[10px] text-amber-600 mt-1 block">Il y a 3h</span>
+                  </div>
                 </div>
 
-                <div className="p-2 rounded-xl bg-amber-50/60 border border-amber-100">
-                  <p className="font-bold text-amber-950">Rappel automatique suggéré</p>
-                  <p className="text-[11px] text-amber-800 mt-0.5">
-                    8 invités n'ont pas encore répondu sur WhatsApp.
-                  </p>
-                  <span className="text-[10px] text-amber-600 mt-1 block">Il y a 3h</span>
+                <div className="mt-2.5 pt-2 border-t border-happy-ink-100 text-center">
+                  <Link
+                    href="/dashboard/rsvp"
+                    onClick={() => setNotificationsOpen(false)}
+                    className="text-xs font-bold text-happy-coral-600 hover:underline"
+                  >
+                    Voir tous les RSVP et alertes →
+                  </Link>
                 </div>
               </div>
-
-              <div className="mt-2.5 pt-2 border-t border-happy-ink-100 text-center">
-                <Link
-                  href="/dashboard/rsvp"
-                  onClick={() => setNotificationsOpen(false)}
-                  className="text-xs font-bold text-happy-coral-600 hover:underline"
-                >
-                  Voir tous les RSVP et alertes →
-                </Link>
-              </div>
-            </div>
+            </>
           )}
         </div>
 

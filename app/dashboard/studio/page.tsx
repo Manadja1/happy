@@ -16,6 +16,7 @@ import {
   Type,
   Image as ImageIcon,
   Smartphone,
+  CheckCircle2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -66,14 +67,31 @@ export default function StudioPage() {
     "Nous avons l'immense honneur de vous convier à célébrer ce moment exceptionnel avec nous."
   );
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [toastMsg, setToastMsg] = useState("");
 
   const handleSave = () => {
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 3000);
   };
 
+  const handleShareWhatsApp = () => {
+    const origin = typeof window !== "undefined" ? window.location.origin : "https://happyevents.ci";
+    const link = `${origin}/e/ange-anniversaire-30`;
+    const message = `🌟 *INVITATION — ${title.toUpperCase()}* 🌟\n\n« ${welcomeMessage} »\n\n📅 *Date :* ${date}\n📍 *Lieu :* ${venue}\n\n👉 Confirmez votre présence et obtenez votre pass d'entrée : ${link}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, "_blank");
+    setToastMsg("Carton d'invitation prêt sur WhatsApp !");
+    setTimeout(() => setToastMsg(""), 3500);
+  };
+
   return (
     <div className="flex flex-col space-y-8 pb-16">
+      {/* Toast Notification */}
+      {toastMsg && (
+        <div className="fixed top-20 right-6 z-50 rounded-2xl bg-emerald-600 px-5 py-3 text-white shadow-xl animate-fadeIn flex items-center gap-2 text-xs font-bold">
+          <CheckCircle2 className="h-4 w-4" />
+          <span>{toastMsg}</span>
+        </div>
+      )}
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-happy-ink-100">
         <div>
@@ -248,7 +266,8 @@ export default function StudioPage() {
               <Button
                 variant="whatsapp"
                 size="sm"
-                className="w-full text-xs font-bold"
+                onClick={handleShareWhatsApp}
+                className="w-full text-xs font-bold shadow-soft"
                 leftIcon={<Share2 className="h-3.5 w-3.5" />}
               >
                 Partager le carton par WhatsApp

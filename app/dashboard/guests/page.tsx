@@ -167,6 +167,13 @@ export default function GuestsPage() {
 
   // Modal State for Guest Details
   const [selectedGuest, setSelectedGuest] = useState<Guest | null>(null);
+  const [eventLink, setEventLink] = useState("https://happyevents.ci/e/ange-anniversaire-30");
+
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      setEventLink(`${window.location.origin}/e/ange-anniversaire-30`);
+    }
+  }, []);
 
   const handleAddGuest = (e: React.FormEvent) => {
     e.preventDefault();
@@ -468,7 +475,7 @@ export default function GuestsPage() {
                     {guest.status === "PENDING" && (
                       <a
                         href={`https://wa.me/?text=${encodeURIComponent(
-                          `Bonjour ${guest.name}, confirmez votre présence à l'événement HAPPY EVENTS ici : http://localhost:3000/e/ange-anniversaire-30`
+                          `Bonjour ${guest.name}, confirmez votre présence à l'événement HAPPY EVENTS ici : ${eventLink}`
                         )}`}
                         target="_blank"
                         rel="noreferrer"
@@ -609,7 +616,7 @@ export default function GuestsPage() {
             <div className="pt-4 flex justify-between">
               <a
                 href={`https://wa.me/?text=${encodeURIComponent(
-                  `Bonjour ${selectedGuest.name}, voici votre invitation : http://localhost:3000/e/ange-anniversaire-30`
+                  `Bonjour ${selectedGuest.name}, voici votre invitation : ${eventLink}`
                 )}`}
                 target="_blank"
                 rel="noreferrer"

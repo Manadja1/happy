@@ -26,6 +26,13 @@ export default function AiAssistantPage() {
   // WhatsApp generator state
   const [tone, setTone] = useState<"warm" | "formal" | "vip" | "traditional">("vip");
   const [guestCount, setGuestCount] = useState<number>(100);
+  const [baseUrl, setBaseUrl] = useState("https://happyevents.ci");
+
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      setBaseUrl(window.location.origin);
+    }
+  }, []);
 
   const handleCopy = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
@@ -33,11 +40,13 @@ export default function AiAssistantPage() {
     setTimeout(() => setCopied(null), 2500);
   };
 
+  const eventLink = `${baseUrl}/e/ange-anniversaire-30`;
+
   const whatsappTemplates = {
-    vip: `🌟 *INVITATION VIP — 30 ANS D'ANGE* 🌟\n\nCher(e) ami(e),\nUne nouvelle décennie se célèbre entouré de ceux qui comptent le plus.\n\nJ'ai le plaisir de vous convier à une soirée d'exception :\n📅 *Samedi 26 Septembre 2026 dès 19h30*\n📍 *Sofitel Abidjan Hôtel Ivoire — Salle Chandelier*\n👔 *Dress Code : Chic & Élégant avec une touche d'Or*\n\nPour valider votre présence et recevoir votre pass QR Code sécurisé en 10 secondes :\n👉 http://localhost:3000/e/ange-anniversaire-30\n\nAu plaisir immense de célébrer ensemble !`,
-    warm: `Salut cher ami ! 🎉\nJe fête mes 30 ans le samedi 26 septembre au Sofitel Hôtel Ivoire et ta présence me ferait énormément plaisir !\n\nConfirme-moi vite ta venue sur ce lien pour recevoir ton pass d'entrée :\n👉 http://localhost:3000/e/ange-anniversaire-30\n\nÀ très vite pour une fête mémorable !`,
-    formal: `Chers Partenaires et Amis,\nNous avons l'honneur de vous convier à la célébration officielle de nos 30 ans.\n\nDate : Samedi 26 Septembre 2026 à 19h30\nLieu : Sofitel Abidjan Hôtel Ivoire\n\nMerci de bien vouloir confirmer votre présence via votre lien sécurisé :\n👉 http://localhost:3000/e/ange-anniversaire-30`,
-    traditional: `Au nom des familles et dans la pure tradition africaine, nous avons la joie de vous convier à célébrer cette grande alliance.\n\nVenez partager ce moment béni avec nous :\n👉 http://localhost:3000/e/ange-anniversaire-30\n\nQue la paix et la joie soient avec vous.`,
+    vip: `🌟 *INVITATION VIP — 30 ANS D'ANGE* 🌟\n\nCher(e) ami(e),\nUne nouvelle décennie se célèbre entouré de ceux qui comptent le plus.\n\nJ'ai le plaisir de vous convier à une soirée d'exception :\n📅 *Samedi 26 Septembre 2026 dès 19h30*\n📍 *Sofitel Abidjan Hôtel Ivoire — Salle Chandelier*\n👔 *Dress Code : Chic & Élégant avec une touche d'Or*\n\nPour valider votre présence et recevoir votre pass QR Code sécurisé en 10 secondes :\n👉 ${eventLink}\n\nAu plaisir immense de célébrer ensemble !`,
+    warm: `Salut cher ami ! 🎉\nJe fête mes 30 ans le samedi 26 septembre au Sofitel Hôtel Ivoire et ta présence me ferait énormément plaisir !\n\nConfirme-moi vite ta venue sur ce lien pour recevoir ton pass d'entrée :\n👉 ${eventLink}\n\nÀ très vite pour une fête mémorable !`,
+    formal: `Chers Partenaires et Amis,\nNous avons l'honneur de vous convier à la célébration officielle de nos 30 ans.\n\nDate : Samedi 26 Septembre 2026 à 19h30\nLieu : Sofitel Abidjan Hôtel Ivoire\n\nMerci de bien vouloir confirmer votre présence via votre lien sécurisé :\n👉 ${eventLink}`,
+    traditional: `Au nom des familles et dans la pure tradition africaine, nous avons la joie de vous convier à célébrer cette grande alliance.\n\nVenez partager ce moment béni avec nous :\n👉 ${eventLink}\n\nQue la paix et la joie soient avec vous.`,
   };
 
   return (

@@ -137,7 +137,7 @@ export function PublicFooter() {
 
         {/* Bottom Bar */}
         <div className="mt-12 pt-8 border-t border-happy-ink-200/60 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-happy-ink-500">
-          <p>© {new Date().getFullYear()} HAPPY EVENTS. Tous droits réservés.</p>
+          <p suppressHydrationWarning>© {new Date().getFullYear()} HAPPY EVENTS. Tous droits réservés.</p>
           <div className="flex items-center gap-1">
             <span>Fait avec</span>
             <Heart className="h-3.5 w-3.5 text-happy-coral-500 fill-happy-coral-500" />

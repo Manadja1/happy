@@ -161,6 +161,10 @@ function CreateEventContent() {
     setCurrentStep(1);
   };
 
+  const currentTplData =
+    TEMPLATE_PRESETS.find((t) => t.id === selectedTemplate) ||
+    TEMPLATE_PRESETS[0];
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -196,10 +200,6 @@ function CreateEventContent() {
       setIsSubmitting(false);
     }
   };
-
-  const currentTplData =
-    TEMPLATE_PRESETS.find((t) => t.id === selectedTemplate) ||
-    TEMPLATE_PRESETS[0];
 
   return (
     <div className="flex flex-col space-y-8 pb-16">
