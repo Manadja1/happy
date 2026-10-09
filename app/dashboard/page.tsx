@@ -18,6 +18,8 @@ import {
   Check,
   Copy,
   Download,
+  Wine,
+  Bot,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -354,6 +356,54 @@ export default function DashboardOverviewPage() {
 
         {/* Right 1 Col: Quick Tools & Assistant */}
         <div className="space-y-6">
+          {/* Happy AI Assistant & Drinks Calculator Featured Card */}
+          <Card className="border-amber-200 bg-gradient-to-br from-amber-50/60 via-white to-happy-sand-50/60 shadow-soft">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gradient-to-tr from-amber-500 to-happy-coral-500 text-white shadow-xs">
+                    <Wine className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-base text-happy-ink-900">
+                      Boissons & Traiteur (IA)
+                    </CardTitle>
+                    <p className="text-[11px] text-amber-800 font-semibold">
+                      Estimation pour 100 invités
+                    </p>
+                  </div>
+                </div>
+                <Badge variant="vip">Happy AI</Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div className="p-2 rounded-xl bg-white border border-amber-200 shadow-2xs">
+                  <p className="text-xs font-black text-amber-950">25 btls</p>
+                  <p className="text-[10px] text-amber-700 font-medium">Champagne</p>
+                </div>
+                <div className="p-2 rounded-xl bg-white border border-rose-200 shadow-2xs">
+                  <p className="text-xs font-black text-rose-950">34 btls</p>
+                  <p className="text-[10px] text-rose-700 font-medium">Vins fins</p>
+                </div>
+                <div className="p-2 rounded-xl bg-white border border-emerald-200 shadow-2xs">
+                  <p className="text-xs font-black text-emerald-950">800 pcs</p>
+                  <p className="text-[10px] text-emerald-700 font-medium">Canapés</p>
+                </div>
+              </div>
+
+              <Link href="/dashboard/ai" className="block">
+                <Button
+                  variant="secondary"
+                  className="w-full text-xs font-bold border-amber-300 text-amber-950 bg-amber-50/60 hover:bg-amber-100"
+                  leftIcon={<Bot className="h-4 w-4 text-amber-600" />}
+                >
+                  Ouvrir l&apos;Assistant Boissons & Planning →
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+
           {/* Quick Check-in scanner card */}
           <Card className="border-emerald-200 bg-emerald-50/30">
             <CardHeader>

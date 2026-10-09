@@ -297,33 +297,81 @@ export default function GuestsPage() {
         </div>
       </div>
 
+      {/* 0. ORGANIZER PROFILE & EVENT CONTEXT (Clairement visible sur mobile et desktop) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-3xl bg-gradient-to-r from-happy-sand-100 via-white to-amber-50/60 border border-happy-ink-100 shadow-2xs">
+        <div className="flex items-center gap-3">
+          <div className="relative shrink-0">
+            <Avatar
+              name="Ange Koffi"
+              size="lg"
+              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80"
+              isVip={true}
+            />
+            <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-white text-[10px] font-bold shadow-xs">
+              ✓
+            </span>
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-sm sm:text-base font-black text-happy-ink-900 truncate">
+                Ange Koffi
+              </h2>
+              <span className="rounded-full bg-happy-coral-100 text-happy-coral-700 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide shrink-0">
+                Organisateur Principal
+              </span>
+            </div>
+            <p className="text-xs text-happy-ink-500 mt-0.5 flex items-center gap-2 flex-wrap">
+              <span className="truncate">ange.koffi@happyevents.ci</span>
+              <span className="hidden xs:inline">•</span>
+              <span className="font-mono text-happy-ink-700 font-semibold shrink-0">+225 07 48 19 20 11</span>
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-happy-ink-100">
+          <div className="text-left sm:text-right">
+            <span className="text-[10px] uppercase font-bold tracking-wider text-happy-ink-400 block">
+              Événement en cours
+            </span>
+            <span className="text-xs font-bold text-happy-coral-600 truncate block">
+              30 ans d&apos;Ange 🎉
+            </span>
+          </div>
+          <Link href="/dashboard/settings">
+            <Button variant="ghost" size="sm" className="text-xs text-happy-ink-600">
+              Modifier
+            </Button>
+          </Link>
+        </div>
+      </div>
+
       {/* Stats Quick Strip */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="rounded-2xl border border-happy-ink-200 bg-white p-4 shadow-2xs">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+        <div className="rounded-2xl border border-happy-ink-200 bg-white p-3.5 sm:p-4 shadow-2xs">
           <p className="text-xs font-semibold text-happy-ink-500">Total Invités</p>
-          <p className="text-2xl font-black text-happy-ink-900 mt-1">{guests.length}</p>
+          <p className="text-xl sm:text-2xl font-black text-happy-ink-900 mt-1">{guests.length}</p>
         </div>
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50/40 p-4 shadow-2xs">
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50/40 p-3.5 sm:p-4 shadow-2xs">
           <p className="text-xs font-semibold text-emerald-800">Confirmés (RSVP)</p>
-          <p className="text-2xl font-black text-emerald-700 mt-1">{totalConfirmed}</p>
+          <p className="text-xl sm:text-2xl font-black text-emerald-700 mt-1">{totalConfirmed}</p>
         </div>
-        <div className="rounded-2xl border border-amber-200 bg-amber-50/40 p-4 shadow-2xs">
+        <div className="rounded-2xl border border-amber-200 bg-amber-50/40 p-3.5 sm:p-4 shadow-2xs">
           <p className="text-xs font-semibold text-amber-800">En attente</p>
-          <p className="text-2xl font-black text-amber-700 mt-1">{totalPending}</p>
+          <p className="text-xl sm:text-2xl font-black text-amber-700 mt-1">{totalPending}</p>
         </div>
-        <div className="rounded-2xl border border-happy-coral-200 bg-happy-coral-50/40 p-4 shadow-2xs">
+        <div className="rounded-2xl border border-happy-coral-200 bg-happy-coral-50/40 p-3.5 sm:p-4 shadow-2xs">
           <p className="text-xs font-semibold text-happy-coral-800">Arrivés (Check-in)</p>
-          <p className="text-2xl font-black text-happy-coral-700 mt-1">{totalCheckedIn}</p>
+          <p className="text-xl sm:text-2xl font-black text-happy-coral-700 mt-1">{totalCheckedIn}</p>
         </div>
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-        {/* Filter Pills */}
-        <div className="flex flex-wrap rounded-2xl bg-happy-sand-100 p-1 w-full sm:w-auto">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        {/* Filter Pills with Horizontal Scrolling on Mobile */}
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none rounded-2xl bg-happy-sand-100 p-1 w-full sm:w-auto pb-1 sm:pb-1">
           <button
             onClick={() => setActiveTab("ALL")}
-            className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all ${
+            className={`shrink-0 px-3 py-1.5 text-xs font-bold rounded-xl transition-all ${
               activeTab === "ALL"
                 ? "bg-white text-happy-ink-900 shadow-xs"
                 : "text-happy-ink-600 hover:text-happy-ink-900"
@@ -333,7 +381,7 @@ export default function GuestsPage() {
           </button>
           <button
             onClick={() => setActiveTab("CONFIRMED")}
-            className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all ${
+            className={`shrink-0 px-3 py-1.5 text-xs font-bold rounded-xl transition-all ${
               activeTab === "CONFIRMED"
                 ? "bg-white text-emerald-700 shadow-xs"
                 : "text-happy-ink-600 hover:text-happy-ink-900"
@@ -343,7 +391,7 @@ export default function GuestsPage() {
           </button>
           <button
             onClick={() => setActiveTab("PENDING")}
-            className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all ${
+            className={`shrink-0 px-3 py-1.5 text-xs font-bold rounded-xl transition-all ${
               activeTab === "PENDING"
                 ? "bg-white text-amber-700 shadow-xs"
                 : "text-happy-ink-600 hover:text-happy-ink-900"
@@ -353,7 +401,7 @@ export default function GuestsPage() {
           </button>
           <button
             onClick={() => setActiveTab("CHECKEDIN")}
-            className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all ${
+            className={`shrink-0 px-3 py-1.5 text-xs font-bold rounded-xl transition-all ${
               activeTab === "CHECKEDIN"
                 ? "bg-white text-happy-coral-600 shadow-xs"
                 : "text-happy-ink-600 hover:text-happy-ink-900"
@@ -363,7 +411,7 @@ export default function GuestsPage() {
           </button>
           <button
             onClick={() => setActiveTab("VIP")}
-            className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all ${
+            className={`shrink-0 px-3 py-1.5 text-xs font-bold rounded-xl transition-all ${
               activeTab === "VIP"
                 ? "bg-white text-amber-800 shadow-xs"
                 : "text-happy-ink-600 hover:text-happy-ink-900"
@@ -386,9 +434,10 @@ export default function GuestsPage() {
         </div>
       </div>
 
-      {/* Guests Table Card */}
+      {/* Guests Container Card */}
       <Card>
-        <div className="overflow-x-auto">
+        {/* DESKTOP TABLE VIEW (Visible md and up) */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-happy-sand-100 text-happy-ink-600 uppercase font-bold border-b border-happy-ink-200/80">
               <tr>
@@ -474,7 +523,7 @@ export default function GuestsPage() {
                   <td className="p-4 text-right space-x-2">
                     {guest.status === "PENDING" && (
                       <a
-                        href={`https://wa.me/?text=${encodeURIComponent(
+                        href={`https://wa.me/${guest.phone.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(
                           `Bonjour ${guest.name}, confirmez votre présence à l'événement HAPPY EVENTS ici : ${eventLink}`
                         )}`}
                         target="_blank"
@@ -497,6 +546,120 @@ export default function GuestsPage() {
               ))}
             </tbody>
           </table>
+        </div>
+
+        {/* MOBILE CARD VIEW (Block on mobile < md) - Ultra-fluide, ergonomique et lisible */}
+        <div className="block md:hidden divide-y divide-happy-ink-100">
+          {filteredGuests.length === 0 ? (
+            <div className="p-8 text-center text-xs text-happy-ink-500">
+              Aucun invité ne correspond à votre recherche.
+            </div>
+          ) : (
+            filteredGuests.map((guest) => (
+              <div
+                key={guest.id}
+                className="p-4 space-y-3 hover:bg-happy-sand-50/50 transition-colors"
+              >
+                {/* Top row: Avatar, Name, VIP, RSVP Badge */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Avatar name={guest.name} isVip={guest.isVip} size="md" />
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-bold text-happy-ink-900 text-sm truncate">
+                          {guest.name}
+                        </span>
+                        {guest.isVip && (
+                          <span className="rounded-full bg-amber-100 text-amber-800 px-1.5 py-0.2 text-[10px] font-black">
+                            👑 VIP
+                          </span>
+                        )}
+                        {guest.plusOne > 0 && (
+                          <span className="rounded-md bg-happy-sand-200 px-1.5 py-0.2 text-[10px] font-bold text-happy-ink-700">
+                            +{guest.plusOne}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-happy-ink-500 font-medium mt-0.5">
+                        {guest.group} {guest.confirmedAt && `• ${guest.confirmedAt}`}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Status Badge */}
+                  <div className="shrink-0">
+                    {guest.status === "CONFIRMED" ? (
+                      <Badge variant="confirmed">Confirmé</Badge>
+                    ) : guest.status === "PENDING" ? (
+                      <Badge variant="pending">En attente</Badge>
+                    ) : (
+                      <Badge variant="declined">Décliné</Badge>
+                    )}
+                  </div>
+                </div>
+
+                {/* Middle row: Phone with 1-Tap Call & 1-Tap WhatsApp */}
+                <div className="flex items-center justify-between gap-2 rounded-xl bg-happy-sand-50 p-2.5 border border-happy-ink-100">
+                  <div className="flex items-center gap-2 font-mono text-xs text-happy-ink-800 font-semibold truncate">
+                    <Phone className="h-3.5 w-3.5 text-happy-ink-500 shrink-0" />
+                    <span className="truncate">{guest.phone}</span>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <a
+                      href={`tel:${guest.phone.replace(/[^0-9+]/g, "")}`}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg bg-white border border-happy-ink-200 text-happy-ink-700 active:bg-happy-sand-100 shadow-2xs"
+                      title="Appeler l'invité"
+                      aria-label={`Appeler ${guest.name}`}
+                    >
+                      <Phone className="h-3.5 w-3.5 text-happy-coral-600" />
+                    </a>
+                    <a
+                      href={`https://wa.me/${guest.phone.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(
+                        `Bonjour ${guest.name}, confirmez votre présence à l'événement HAPPY EVENTS ici : ${eventLink}`
+                      )}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500 text-white active:bg-emerald-600 shadow-2xs"
+                      title="Message WhatsApp"
+                      aria-label={`WhatsApp à ${guest.name}`}
+                    >
+                      <MessageCircle className="h-3.5 w-3.5" />
+                    </a>
+                  </div>
+                </div>
+
+                {/* Dietary Restriction if present */}
+                {guest.dietary && (
+                  <div className="text-[11px] text-amber-800 bg-amber-50 rounded-lg px-2.5 py-1 border border-amber-200 font-medium">
+                    🍽️ Régime : <strong>{guest.dietary}</strong>
+                  </div>
+                )}
+
+                {/* Bottom row: Touch Check-in toggle + Details modal trigger */}
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    onClick={() => toggleCheckIn(guest.id)}
+                    className={`flex-1 flex items-center justify-center gap-2 rounded-xl py-2 px-3 text-xs font-bold transition-all min-h-[40px] ${
+                      guest.checkedIn
+                        ? "bg-emerald-600 text-white shadow-soft"
+                        : "bg-happy-sand-100 text-happy-ink-700 hover:bg-emerald-50 hover:text-emerald-800 border border-happy-ink-200"
+                    }`}
+                  >
+                    <CheckCircle2 className="h-4 w-4 shrink-0" />
+                    <span>{guest.checkedIn ? "Arrivé ✓ (Présent)" : "Marquer présent"}</span>
+                  </button>
+
+                  <button
+                    onClick={() => setSelectedGuest(guest)}
+                    className="rounded-xl border border-happy-ink-200 bg-white py-2 px-3 text-xs font-bold text-happy-ink-700 hover:bg-happy-sand-100 transition-colors shrink-0 min-h-[40px]"
+                  >
+                    Détails
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </Card>
 

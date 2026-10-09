@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Bot,
@@ -14,13 +14,18 @@ import {
   Send,
   Wand2,
   Calendar,
+  Share2,
+  Droplets,
+  Beer,
+  Utensils,
+  Cake,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 export default function AiAssistantPage() {
-  const [activeTab, setActiveTab] = useState<"timeline" | "whatsapp" | "calculator" | "checklist">("timeline");
+  const [activeTab, setActiveTab] = useState<"calculator" | "timeline" | "whatsapp" | "checklist">("calculator");
   const [copied, setCopied] = useState<string | null>(null);
 
   // WhatsApp generator state
@@ -28,9 +33,14 @@ export default function AiAssistantPage() {
   const [guestCount, setGuestCount] = useState<number>(100);
   const [baseUrl, setBaseUrl] = useState("https://happyevents.ci");
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (typeof window !== "undefined") {
       setBaseUrl(window.location.origin);
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get("tab");
+      if (tabParam === "timeline" || tabParam === "whatsapp" || tabParam === "checklist" || tabParam === "calculator") {
+        setActiveTab(tabParam);
+      }
     }
   }, []);
 
@@ -42,6 +52,36 @@ export default function AiAssistantPage() {
 
   const eventLink = `${baseUrl}/e/ange-anniversaire-30`;
 
+  // Calculated Catering & Drinks values based on guestCount
+  const champagneBottles = Math.ceil(guestCount / 4);
+  const wineBottles = Math.ceil(guestCount / 3);
+  const beerBottles = guestCount * 2;
+  const softDrinksBottles = Math.ceil(guestCount * 1.5);
+  const waterPacks = Math.ceil(guestCount / 6);
+  const spiritsBottles = Math.ceil(guestCount / 12);
+  const canapesPieces = guestCount * 8;
+  const buffetPortions = Math.ceil(guestCount * 1.15);
+  const cakePortions = guestCount;
+
+  const cateringSummaryText = `🎉 *ESTIMATION BOISSONS & TRAITEUR — HAPPY EVENTS*
+Événement : 30 ans d'Ange (Sofitel Ivoire)
+Nombre de convives : ${guestCount} personnes
+
+🍾 *BOISSONS & BAR :*
+• Champagne & Mousseux : ${champagneBottles} bouteilles (~1 coupe d'accueil + toast)
+• Vins Rouges & Blancs : ${wineBottles} bouteilles (Service à table)
+• Bières & Panachés (Solibra, Beaufort, Heineken) : ${beerBottles} bouteilles
+• Sodas, Sucreries & Jus frais (Bissap, Gingembre) : ${softDrinksBottles} bouteilles/packs
+• Eau minérale (Awa / Céleste) : ${waterPacks} packs de 12 (0.5L / 1.5L)
+• Spiritueux de bar (Whisky, Rhum, Gin) : ${spiritsBottles} bouteilles
+
+🍢 *BUFFET & TRAITEUR :*
+• Amuse-bouches & Cocktail : ${canapesPieces} pièces (8 pièces/pers.)
+• Buffet chaud (Plats de résistance) : ${buffetPortions} portions (+15% de marge)
+• Gâteau d'anniversaire : ${cakePortions} parts
+
+Calculé avec HAPPY AI Assistant • ${eventLink}`;
+
   const whatsappTemplates = {
     vip: `🌟 *INVITATION VIP — 30 ANS D'ANGE* 🌟\n\nCher(e) ami(e),\nUne nouvelle décennie se célèbre entouré de ceux qui comptent le plus.\n\nJ'ai le plaisir de vous convier à une soirée d'exception :\n📅 *Samedi 26 Septembre 2026 dès 19h30*\n📍 *Sofitel Abidjan Hôtel Ivoire — Salle Chandelier*\n👔 *Dress Code : Chic & Élégant avec une touche d'Or*\n\nPour valider votre présence et recevoir votre pass QR Code sécurisé en 10 secondes :\n👉 ${eventLink}\n\nAu plaisir immense de célébrer ensemble !`,
     warm: `Salut cher ami ! 🎉\nJe fête mes 30 ans le samedi 26 septembre au Sofitel Hôtel Ivoire et ta présence me ferait énormément plaisir !\n\nConfirme-moi vite ta venue sur ce lien pour recevoir ton pass d'entrée :\n👉 ${eventLink}\n\nÀ très vite pour une fête mémorable !`,
@@ -50,18 +90,26 @@ export default function AiAssistantPage() {
   };
 
   return (
-    <div className="space-y-8 animate-fadeIn pb-16">
+    <div className="space-y-6 sm:space-y-8 animate-fadeIn pb-16">
+      {/* Toast Notification */}
+      {copied && (
+        <div className="fixed top-20 right-6 z-50 rounded-2xl bg-emerald-600 px-5 py-3 text-white shadow-xl animate-fadeIn flex items-center gap-2 text-xs font-bold">
+          <CheckCircle2 className="h-4 w-4" />
+          <span>Élément copié avec succès dans le presse-papier !</span>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-happy-ink-100">
         <div>
           <h1 className="text-2xl sm:text-3xl font-black text-happy-ink-900 font-display flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-happy-coral-500 to-amber-500 text-white shadow-soft">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-happy-coral-500 to-amber-500 text-white shadow-soft">
               <Sparkles className="h-5 w-5" />
             </div>
             <span>HAPPY AI — Assistant Intelligent</span>
           </h1>
           <p className="text-xs sm:text-sm text-happy-ink-600 mt-1">
-            Générez votre déroulé de soirée, calculez votre traiteur et rédigez vos messages WhatsApp en un clic.
+            Générez votre déroulé de soirée, calculez vos boissons & traiteur et rédigez vos invitations WhatsApp.
           </p>
         </div>
 
@@ -70,63 +118,324 @@ export default function AiAssistantPage() {
         </Badge>
       </div>
 
-      {/* Feature Mode Tabs */}
-      <div className="flex flex-wrap rounded-2xl bg-happy-sand-100 p-1">
+      {/* Feature Mode Tabs (Scrollable on mobile - Garanti accessible sur tous les écrans) */}
+      <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none rounded-2xl bg-happy-sand-100 p-1.5 w-full">
+        <button
+          onClick={() => setActiveTab("calculator")}
+          className={`flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-xl transition-all shrink-0 ${
+            activeTab === "calculator"
+              ? "bg-white text-amber-900 shadow-xs ring-1 ring-amber-200"
+              : "text-happy-ink-600 hover:text-happy-ink-900"
+          }`}
+        >
+          <Wine className="h-4 w-4 text-amber-600 shrink-0" />
+          <span>🍾 Boissons & Traiteur</span>
+          <span className="rounded-full bg-amber-100 px-1.5 py-0.2 text-[9px] font-black text-amber-800">
+            Calculateur
+          </span>
+        </button>
+
         <button
           onClick={() => setActiveTab("timeline")}
-          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-xl transition-all ${
+          className={`flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-xl transition-all shrink-0 ${
             activeTab === "timeline"
               ? "bg-white text-happy-ink-900 shadow-xs"
               : "text-happy-ink-600 hover:text-happy-ink-900"
           }`}
         >
-          <Clock className="h-4 w-4 text-happy-coral-500" />
-          <span>Déroulé & Planning Minute par Minute</span>
+          <Clock className="h-4 w-4 text-happy-coral-500 shrink-0" />
+          <span>⏱️ Déroulé & Planning</span>
         </button>
+
         <button
           onClick={() => setActiveTab("whatsapp")}
-          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-xl transition-all ${
+          className={`flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-xl transition-all shrink-0 ${
             activeTab === "whatsapp"
               ? "bg-white text-emerald-800 shadow-xs"
               : "text-happy-ink-600 hover:text-happy-ink-900"
           }`}
         >
-          <MessageCircle className="h-4 w-4 text-emerald-600" />
-          <span>Rédacteur WhatsApp Intelligent</span>
+          <MessageCircle className="h-4 w-4 text-emerald-600 shrink-0" />
+          <span>💬 Textes WhatsApp</span>
         </button>
-        <button
-          onClick={() => setActiveTab("calculator")}
-          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-xl transition-all ${
-            activeTab === "calculator"
-              ? "bg-white text-amber-800 shadow-xs"
-              : "text-happy-ink-600 hover:text-happy-ink-900"
-          }`}
-        >
-          <Wine className="h-4 w-4 text-amber-600" />
-          <span>Calculateur Boissons & Traiteur</span>
-        </button>
+
         <button
           onClick={() => setActiveTab("checklist")}
-          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-xl transition-all ${
+          className={`flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-xl transition-all shrink-0 ${
             activeTab === "checklist"
               ? "bg-white text-happy-coral-700 shadow-xs"
               : "text-happy-ink-600 hover:text-happy-ink-900"
           }`}
         >
-          <CheckCircle2 className="h-4 w-4 text-happy-coral-600" />
-          <span>Checklist & Recommandations</span>
+          <CheckCircle2 className="h-4 w-4 text-happy-coral-600 shrink-0" />
+          <span>✅ Checklist J-30</span>
         </button>
       </div>
 
-      {/* Tab 1: Timeline Planning */}
+      {/* TAB 1: CATERING & BEVERAGE CALCULATOR (La section demandée spécifiquement) */}
+      {activeTab === "calculator" && (
+        <Card className="p-4 sm:p-6 space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-happy-ink-100">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xl sm:text-2xl">🍾</span>
+                <h2 className="text-lg sm:text-xl font-bold text-happy-ink-900 font-display">
+                  Calculateur Prévisionnel Boissons, Bar & Buffet Traiteur
+                </h2>
+              </div>
+              <p className="text-xs text-happy-ink-500 mt-1">
+                Quantités exactes recommandées selon les standards de réception à Abidjan (vin, champagne, bières locales, sodas et mets chauds).
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => handleCopy(cateringSummaryText, "catering_copy")}
+                leftIcon={copied === "catering_copy" ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
+              >
+                {copied === "catering_copy" ? "Copié !" : "Copier la liste"}
+              </Button>
+              <a
+                href={`https://wa.me/?text=${encodeURIComponent(cateringSummaryText)}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <Button
+                  variant="whatsapp"
+                  size="sm"
+                  leftIcon={<Share2 className="h-4 w-4" />}
+                >
+                  Envoyer WhatsApp
+                </Button>
+              </a>
+            </div>
+          </div>
+
+          {/* Guest Count Selector & Presets */}
+          <div className="rounded-3xl bg-happy-sand-50 p-4 sm:p-6 border border-happy-ink-100 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <label className="text-xs sm:text-sm font-black text-happy-ink-900 uppercase tracking-wide">
+                Nombre de personnes prévues :
+              </label>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl sm:text-3xl font-black text-happy-coral-600 font-display">
+                  {guestCount}
+                </span>
+                <span className="text-xs font-bold text-happy-ink-600">invités</span>
+              </div>
+            </div>
+
+            {/* Slider */}
+            <input
+              type="range"
+              min="20"
+              max="500"
+              step="10"
+              value={guestCount}
+              onChange={(e) => setGuestCount(Number(e.target.value))}
+              className="w-full accent-happy-coral-500 h-2 bg-happy-sand-200 rounded-lg cursor-pointer"
+            />
+
+            {/* Quick Presets Buttons (Super pratique sur mobile) */}
+            <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pt-1">
+              <span className="text-[11px] font-bold text-happy-ink-500 shrink-0">Presets :</span>
+              {[30, 50, 100, 150, 200, 300, 500].map((preset) => (
+                <button
+                  key={preset}
+                  onClick={() => setGuestCount(preset)}
+                  className={`px-3 py-1 rounded-xl text-xs font-bold transition-all shrink-0 ${
+                    guestCount === preset
+                      ? "bg-happy-coral-600 text-white shadow-soft"
+                      : "bg-white text-happy-ink-700 border border-happy-ink-200 hover:bg-happy-sand-100"
+                  }`}
+                >
+                  {preset} pers.
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Section 1: BOISSONS & BAR (La liste complète) */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Wine className="h-5 w-5 text-happy-coral-600" />
+              <h3 className="text-sm font-black uppercase tracking-wider text-happy-ink-900">
+                1. Boissons & Bar (Cave & Fraîcheur)
+              </h3>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+              {/* Champagne */}
+              <div className="p-4 rounded-2xl border border-amber-200 bg-amber-50/40 hover:bg-amber-50/70 transition-colors">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-amber-900 uppercase">Champagne & Mousseux</span>
+                  <span className="text-lg">🍾</span>
+                </div>
+                <p className="text-2xl font-black text-amber-950 mt-1">
+                  {champagneBottles} bouteilles
+                </p>
+                <p className="text-[11px] text-amber-800 mt-1">
+                  ~1 coupe d&apos;accueil + 1 toast pour le gâteau
+                </p>
+              </div>
+
+              {/* Vin Rouge & Blanc */}
+              <div className="p-4 rounded-2xl border border-rose-200 bg-rose-50/40 hover:bg-rose-50/70 transition-colors">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-rose-900 uppercase">Vins Rouges & Blancs</span>
+                  <span className="text-lg">🍷</span>
+                </div>
+                <p className="text-2xl font-black text-rose-950 mt-1">
+                  {wineBottles} bouteilles
+                </p>
+                <p className="text-[11px] text-rose-800 mt-1">
+                  À servir pendant le dîner (~1 bouteille pour 3 convives)
+                </p>
+              </div>
+
+              {/* Bières locales & fraîches */}
+              <div className="p-4 rounded-2xl border border-yellow-200 bg-yellow-50/40 hover:bg-yellow-50/70 transition-colors">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-yellow-900 uppercase">Bières & Panachés</span>
+                  <span className="text-lg">🍺</span>
+                </div>
+                <p className="text-2xl font-black text-yellow-950 mt-1">
+                  {beerBottles} bouteilles / canettes
+                </p>
+                <p className="text-[11px] text-yellow-800 mt-1">
+                  Solibra, Beaufort Lager, Bock & Heineken très fraîches
+                </p>
+              </div>
+
+              {/* Sodas, Sucreries & Jus d'Abidjan */}
+              <div className="p-4 rounded-2xl border border-orange-200 bg-orange-50/40 hover:bg-orange-50/70 transition-colors">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-orange-900 uppercase">Softs & Jus de fruits</span>
+                  <span className="text-lg">🧃</span>
+                </div>
+                <p className="text-2xl font-black text-orange-950 mt-1">
+                  {softDrinksBottles} bouteilles
+                </p>
+                <p className="text-[11px] text-orange-800 mt-1">
+                  Sodas, jus d&apos;orange, Bissap & Gingembre naturel
+                </p>
+              </div>
+
+              {/* Eau Minérale */}
+              <div className="p-4 rounded-2xl border border-sky-200 bg-sky-50/40 hover:bg-sky-50/70 transition-colors">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-sky-900 uppercase">Eau Minérale Naturelle</span>
+                  <span className="text-lg">💧</span>
+                </div>
+                <p className="text-2xl font-black text-sky-950 mt-1">
+                  {waterPacks} packs de 12
+                </p>
+                <p className="text-[11px] text-sky-800 mt-1">
+                  Packs d&apos;eau Awa / Céleste (bouteilles 0.5L et 1.5L)
+                </p>
+              </div>
+
+              {/* Spiritueux & Cocktails */}
+              <div className="p-4 rounded-2xl border border-purple-200 bg-purple-50/40 hover:bg-purple-50/70 transition-colors">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-purple-900 uppercase">Spiritueux & Bar</span>
+                  <span className="text-lg">🍸</span>
+                </div>
+                <p className="text-2xl font-black text-purple-950 mt-1">
+                  {spiritsBottles} bouteilles
+                </p>
+                <p className="text-[11px] text-purple-800 mt-1">
+                  Whisky, Rhum, Gin & Vodka pour les cocktails de nuit
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 2: BUFFET & REPAS TRAITEUR */}
+          <div className="space-y-3 pt-2">
+            <div className="flex items-center gap-2">
+              <Utensils className="h-5 w-5 text-emerald-600" />
+              <h3 className="text-sm font-black uppercase tracking-wider text-happy-ink-900">
+                2. Buffet, Amuse-Bouches & Gâteau
+              </h3>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+              {/* Amuse-bouches */}
+              <div className="p-4 rounded-2xl border border-emerald-200 bg-emerald-50/40">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-emerald-900 uppercase">Canapés & Cocktail</span>
+                  <span className="text-lg">🍢</span>
+                </div>
+                <p className="text-2xl font-black text-emerald-950 mt-1">
+                  {canapesPieces} pièces
+                </p>
+                <p className="text-[11px] text-emerald-800 mt-1">
+                  Mini-brochettes, pastels, samoussas & toasts (8 pcs/invité)
+                </p>
+              </div>
+
+              {/* Plats de résistance */}
+              <div className="p-4 rounded-2xl border border-teal-200 bg-teal-50/40">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-teal-900 uppercase">Buffet Chaud</span>
+                  <span className="text-lg">🍗</span>
+                </div>
+                <p className="text-2xl font-black text-teal-950 mt-1">
+                  {buffetPortions} portions
+                </p>
+                <p className="text-[11px] text-teal-800 mt-1">
+                  Mérou braisé, poulet piqué, alloco, riz pilaf & attiéké
+                </p>
+              </div>
+
+              {/* Gâteau */}
+              <div className="p-4 rounded-2xl border border-pink-200 bg-pink-50/40">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-pink-900 uppercase">Gâteau d&apos;Événement</span>
+                  <span className="text-lg">🎂</span>
+                </div>
+                <p className="text-2xl font-black text-pink-950 mt-1">
+                  {cakePortions} parts
+                </p>
+                <p className="text-[11px] text-pink-800 mt-1">
+                  Pièce montée ou gâteau design personnalisé
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Action Footer */}
+          <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-happy-ink-100">
+            <p className="text-xs text-happy-ink-500">
+              💡 <em>Astuce Happy : Prévoyez toujours 15% de glace pilée et de glaçons en supplément pour les cocktails en climat tropical.</em>
+            </p>
+
+            <a
+              href={`https://wa.me/?text=${encodeURIComponent(cateringSummaryText)}`}
+              target="_blank"
+              rel="noreferrer"
+              className="w-full sm:w-auto"
+            >
+              <Button variant="whatsapp" className="w-full text-xs" leftIcon={<Send className="h-4 w-4" />}>
+                Partager l&apos;estimation au Caviste / Traiteur
+              </Button>
+            </a>
+          </div>
+        </Card>
+      )}
+
+      {/* TAB 2: TIMELINE PLANNING */}
       {activeTab === "timeline" && (
-        <Card className="p-6">
-          <div className="flex items-center justify-between mb-6 pb-4 border-b border-happy-ink-100">
+        <Card className="p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-happy-ink-100">
             <div>
               <h2 className="text-lg font-bold text-happy-ink-900 font-display">
-                Planning suggéré par l'IA : Anniversaire VIP (100 personnes)
+                Planning suggéré par l&apos;IA : Anniversaire VIP (100 personnes)
               </h2>
-              <p className="text-xs text-happy-ink-500">
+              <p className="text-xs text-happy-ink-500 mt-0.5">
                 Généré sur mesure pour le Sofitel Hôtel Ivoire avec DJ et cocktail dînatoire.
               </p>
             </div>
@@ -186,14 +495,14 @@ export default function AiAssistantPage() {
             ].map((step, idx) => (
               <div
                 key={idx}
-                className="flex items-start gap-4 p-4 rounded-2xl bg-happy-sand-50/70 border border-happy-ink-100 hover:border-happy-coral-200 transition-colors"
+                className="flex items-start gap-3 sm:gap-4 p-3.5 sm:p-4 rounded-2xl bg-happy-sand-50/70 border border-happy-ink-100 hover:border-happy-coral-200 transition-colors"
               >
-                <div className="rounded-xl bg-white border border-happy-sand-200 px-3 py-1.5 text-xs font-mono font-bold text-happy-coral-600 shrink-0 shadow-2xs">
+                <div className="rounded-xl bg-white border border-happy-sand-200 px-2.5 sm:px-3 py-1.5 text-xs font-mono font-bold text-happy-coral-600 shrink-0 shadow-2xs">
                   {step.time}
                 </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-bold text-happy-ink-900">{step.title}</h3>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-xs sm:text-sm font-bold text-happy-ink-900">{step.title}</h3>
                     <Badge variant="confirmed">{step.badge}</Badge>
                   </div>
                   <p className="text-xs text-happy-ink-600 mt-1">{step.desc}</p>
@@ -204,12 +513,12 @@ export default function AiAssistantPage() {
         </Card>
       )}
 
-      {/* Tab 2: WhatsApp Generator */}
+      {/* TAB 3: WHATSAPP GENERATOR */}
       {activeTab === "whatsapp" && (
-        <Card className="p-6">
+        <Card className="p-4 sm:p-6">
           <div className="max-w-2xl space-y-4">
             <h2 className="text-lg font-bold text-happy-ink-900 font-display">
-              Générateur de Messages d'Invitation WhatsApp
+              Générateur de Messages d&apos;Invitation WhatsApp
             </h2>
             <p className="text-xs text-happy-ink-500">
               Choisissez le ton adapté à votre audience. Le texte est prêt à être partagé sur WhatsApp avec votre lien unique.
@@ -265,7 +574,7 @@ export default function AiAssistantPage() {
                 {whatsappTemplates[tone]}
               </pre>
 
-              <div className="mt-4 pt-3 border-t border-emerald-200/60 flex items-center justify-between">
+              <div className="mt-4 pt-3 border-t border-emerald-200/60 flex items-center justify-between flex-wrap gap-2">
                 <Button
                   variant="whatsapp"
                   size="sm"
@@ -290,71 +599,9 @@ export default function AiAssistantPage() {
         </Card>
       )}
 
-      {/* Tab 3: Catering Calculator */}
-      {activeTab === "calculator" && (
-        <Card className="p-6">
-          <div className="max-w-3xl space-y-6">
-            <div>
-              <h2 className="text-lg font-bold text-happy-ink-900 font-display">
-                Calculateur Prévisionnel Boissons & Buffet Traiteur
-              </h2>
-              <p className="text-xs text-happy-ink-500">
-                Ajustez le nombre d'invités pour obtenir les quantités recommandées par les meilleurs traiteurs d'Abidjan.
-              </p>
-            </div>
-
-            {/* Slider */}
-            <div className="rounded-2xl bg-happy-sand-50 p-4 border border-happy-ink-100">
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-xs font-bold text-happy-ink-800">
-                  Nombre d'invités prévus :
-                </label>
-                <span className="text-lg font-black text-happy-coral-600">{guestCount} personnes</span>
-              </div>
-              <input
-                type="range"
-                min="20"
-                max="500"
-                step="10"
-                value={guestCount}
-                onChange={(e) => setGuestCount(Number(e.target.value))}
-                className="w-full accent-happy-coral-500"
-              />
-            </div>
-
-            {/* Results Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="p-4 rounded-2xl border border-amber-200 bg-amber-50/50">
-                <span className="text-xs font-bold text-amber-800 uppercase">Champagne & Mousseux</span>
-                <p className="text-2xl font-black text-amber-950 mt-1">
-                  {Math.ceil(guestCount / 4)} bouteilles
-                </p>
-                <p className="text-[11px] text-amber-700 mt-1">~1 coupe d'accueil + 1 toast gâteau</p>
-              </div>
-
-              <div className="p-4 rounded-2xl border border-rose-200 bg-rose-50/50">
-                <span className="text-xs font-bold text-rose-800 uppercase">Vin Rouge & Blanc</span>
-                <p className="text-2xl font-black text-rose-950 mt-1">
-                  {Math.ceil(guestCount / 3)} bouteilles
-                </p>
-                <p className="text-[11px] text-rose-700 mt-1">Pour accompagner le dîner</p>
-              </div>
-
-              <div className="p-4 rounded-2xl border border-emerald-200 bg-emerald-50/50">
-                <span className="text-xs font-bold text-emerald-800 uppercase">Cocktail & Canapés</span>
-                <p className="text-2xl font-black text-emerald-950 mt-1">
-                  {guestCount * 8} pièces
-                </p>
-                <p className="text-[11px] text-emerald-700 mt-1">8 pièces salées/sucrées par pers.</p>
-              </div>
-            </div>
-          </div>
-        </Card>
-      )}
-
-      {/* Tab 4: Checklist */}
+      {/* TAB 4: CHECKLIST */}
       {activeTab === "checklist" && (
-        <Card className="p-6">
+        <Card className="p-4 sm:p-6">
           <h2 className="text-lg font-bold text-happy-ink-900 font-display mb-4">
             Checklist Intelligente J-30 à Jour J
           </h2>
