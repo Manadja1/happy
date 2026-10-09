@@ -1,0 +1,273 @@
+{
+  "users": [
+    {
+      "id": "usr_demo_abidjan_01",
+      "name": "Ange Koffi",
+      "email": "ange.koffi@happyevents.ci",
+      "phone": "+225 07 00 11 22 33",
+      "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+      "role": "OWNER",
+      "createdAt": "2026-01-15T10:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z"
+    }
+  ],
+  "events": [
+    {
+      "id": "evt_30ans_ange",
+      "ownerId": "usr_demo_abidjan_01",
+      "name": "Anniversaire d'Ange — 30 Ans",
+      "type": "BIRTHDAY",
+      "description": "Trente ans, c'est une étape inoubliable ! J'ai l'immense joie de vous convier pour une soirée festive d'exception au Sofitel Hôtel Ivoire.",
+      "date": "2026-09-26T19:30:00.000Z",
+      "startTime": "19:30",
+      "endTime": "04:00",
+      "timezone": "Africa/Abidjan",
+      "venue": "Sofitel Abidjan Hôtel Ivoire — Salle Chandelier",
+      "address": "Boulevard Hassan II, Cocody, Abidjan, Côte d'Ivoire",
+      "latitude": 5.3283,
+      "longitude": -4.0083,
+      "coverImage": "https://images.unsplash.com/photo-1519671482749-fd09be7ccebf?w=1200&auto=format&fit=crop&q=80",
+      "theme": "Or & Blanc Impérial",
+      "slug": "ange-anniversaire-30",
+      "status": "PUBLISHED",
+      "createdAt": "2026-08-01T08:00:00.000Z",
+      "updatedAt": "2026-09-10T14:30:00.000Z"
+    },
+    {
+      "id": "evt_mariage_marc_aminata",
+      "ownerId": "usr_demo_abidjan_01",
+      "name": "Mariage de Marc & Aminata",
+      "type": "WEDDING",
+      "description": "Célébration solennelle et réception nuptiale sous les étoiles.",
+      "date": "2026-10-17T15:00:00.000Z",
+      "startTime": "15:00",
+      "endTime": "02:00",
+      "timezone": "Africa/Abidjan",
+      "venue": "Cathédrale Saint-Paul & Espace Crystal, Abidjan",
+      "address": "Plateau & Zone 4, Abidjan",
+      "latitude": 5.334,
+      "longitude": -4.018,
+      "coverImage": "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=1200&auto=format&fit=crop&q=80",
+      "theme": "Classic Gold & Ivory",
+      "slug": "mariage-marc-et-aminata",
+      "status": "PUBLISHED",
+      "createdAt": "2026-08-15T09:00:00.000Z",
+      "updatedAt": "2026-09-20T11:00:00.000Z"
+    },
+    {
+      "id": "evt_dot_koffi_estelle",
+      "ownerId": "usr_demo_abidjan_01",
+      "name": "Dot Coutumière de Koffi & Estelle",
+      "type": "DOT",
+      "description": "Union coutumière et festivités traditionnelles familiales.",
+      "date": "2026-11-07T11:00:00.000Z",
+      "startTime": "11:00",
+      "endTime": "20:00",
+      "timezone": "Africa/Abidjan",
+      "venue": "Résidence Familiale Baoulé, Yamoussoukro",
+      "address": "Quartier Millionnaire, Yamoussoukro",
+      "latitude": 6.827,
+      "longitude": -5.289,
+      "coverImage": "https://images.unsplash.com/photo-1544077960-604201fe74bc?w=1200&auto=format&fit=crop&q=80",
+      "theme": "Wax Royal & Kente",
+      "slug": "dot-koffi-estelle-2026",
+      "status": "DRAFT",
+      "createdAt": "2026-09-01T10:00:00.000Z",
+      "updatedAt": "2026-09-18T16:00:00.000Z"
+    }
+  ],
+  "guests": [
+    {
+      "id": "gst_01",
+      "eventId": "evt_30ans_ange",
+      "firstName": "Marc-Antoine",
+      "lastName": "Konan",
+      "phone": "+225 07 48 19 20 11",
+      "email": "ma.konan@example.ci",
+      "group": "Famille proche",
+      "isVip": true,
+      "plusOneAllowed": true,
+      "plusOneCount": 1,
+      "rsvpStatus": "CONFIRMED",
+      "qrToken": "tok_ange_konan_01",
+      "checkedIn": true,
+      "createdAt": "2026-08-05T10:00:00.000Z",
+      "updatedAt": "2026-09-26T20:15:00.000Z"
+    },
+    {
+      "id": "gst_02",
+      "eventId": "evt_30ans_ange",
+      "firstName": "Aïcha",
+      "lastName": "Traoré",
+      "phone": "+225 05 12 34 56 78",
+      "email": "aicha.traore@example.com",
+      "group": "Amis d'enfance",
+      "isVip": false,
+      "plusOneAllowed": false,
+      "plusOneCount": 0,
+      "rsvpStatus": "CONFIRMED",
+      "qrToken": "tok_ange_traore_02",
+      "checkedIn": true,
+      "createdAt": "2026-08-05T11:00:00.000Z",
+      "updatedAt": "2026-09-26T20:45:00.000Z"
+    },
+    {
+      "id": "gst_03",
+      "eventId": "evt_30ans_ange",
+      "firstName": "Dr. Jean-Yves",
+      "lastName": "Touré",
+      "phone": "+225 01 98 76 54 32",
+      "email": "dr.toure@clinic.ci",
+      "group": "Collègues",
+      "isVip": true,
+      "plusOneAllowed": true,
+      "plusOneCount": 1,
+      "rsvpStatus": "CONFIRMED",
+      "qrToken": "tok_ange_toure_03",
+      "checkedIn": false,
+      "createdAt": "2026-08-06T09:30:00.000Z",
+      "updatedAt": "2026-09-20T15:00:00.000Z"
+    },
+    {
+      "id": "gst_04",
+      "eventId": "evt_30ans_ange",
+      "firstName": "Carine",
+      "lastName": "Kouamé",
+      "phone": "+225 07 65 43 21 00",
+      "email": "carine.k@example.com",
+      "group": "Amis",
+      "isVip": false,
+      "plusOneAllowed": false,
+      "plusOneCount": 0,
+      "rsvpStatus": "PENDING",
+      "qrToken": "tok_ange_kouame_04",
+      "checkedIn": false,
+      "createdAt": "2026-08-07T14:00:00.000Z",
+      "updatedAt": "2026-08-07T14:00:00.000Z"
+    },
+    {
+      "id": "gst_05",
+      "eventId": "evt_30ans_ange",
+      "firstName": "Ibrahim",
+      "lastName": "Diallo",
+      "phone": "+225 07 11 22 33 44",
+      "email": "ibrahim.diallo@example.com",
+      "group": "Collègues",
+      "isVip": false,
+      "plusOneAllowed": false,
+      "plusOneCount": 0,
+      "rsvpStatus": "DECLINED",
+      "qrToken": "tok_ange_diallo_05",
+      "checkedIn": false,
+      "createdAt": "2026-08-08T16:00:00.000Z",
+      "updatedAt": "2026-09-12T11:00:00.000Z"
+    },
+    {
+      "id": "gst_06",
+      "eventId": "evt_30ans_ange",
+      "firstName": "Sarah",
+      "lastName": "Bamba",
+      "phone": "+225 05 99 88 77 66",
+      "email": "sarah.b@example.ci",
+      "group": "Famille proche",
+      "isVip": true,
+      "plusOneAllowed": true,
+      "plusOneCount": 1,
+      "rsvpStatus": "CONFIRMED",
+      "qrToken": "tok_ange_bamba_06",
+      "checkedIn": false,
+      "createdAt": "2026-08-10T12:00:00.000Z",
+      "updatedAt": "2026-09-22T10:00:00.000Z"
+    }
+  ],
+  "rsvps": [
+    {
+      "id": "rsvp_01",
+      "eventId": "evt_30ans_ange",
+      "guestId": "gst_01",
+      "status": "CONFIRMED",
+      "attendeeCount": 2,
+      "dietaryPreference": "Sans fruits de mer",
+      "message": "Joyeux 30 ans mon frère ! On sera présents avec Estelle.",
+      "respondedAt": "2026-08-10T18:00:00.000Z"
+    },
+    {
+      "id": "rsvp_02",
+      "eventId": "evt_30ans_ange",
+      "guestId": "gst_02",
+      "status": "CONFIRMED",
+      "attendeeCount": 1,
+      "dietaryPreference": null,
+      "message": "Hâte de fêter ça ensemble !",
+      "respondedAt": "2026-08-12T09:30:00.000Z"
+    },
+    {
+      "id": "rsvp_03",
+      "eventId": "evt_30ans_ange",
+      "guestId": "gst_03",
+      "status": "CONFIRMED",
+      "attendeeCount": 2,
+      "dietaryPreference": "Végétarien pour Mme Touré",
+      "message": "Toutes nos félicitations Ange.",
+      "respondedAt": "2026-09-20T15:00:00.000Z"
+    },
+    {
+      "id": "rsvp_05",
+      "eventId": "evt_30ans_ange",
+      "guestId": "gst_05",
+      "status": "DECLINED",
+      "attendeeCount": 0,
+      "dietaryPreference": null,
+      "message": "Vraiment désolé, je serai en déplacement professionnel à Dakar à cette date.",
+      "respondedAt": "2026-09-12T11:00:00.000Z"
+    }
+  ],
+  "invitations": [
+    {
+      "id": "inv_01",
+      "eventId": "evt_30ans_ange",
+      "templateId": "midnight-sparkle",
+      "title": "Anniversaire d'Ange — 30 Ans",
+      "content": "Nous avons l'immense joie de vous convier à célébrer ce grand cap dans une ambiance festive et chaleureuse !",
+      "themeConfig": {
+        "accentColor": "#F59E0B",
+        "fontDisplay": "Outfit"
+      },
+      "published": true,
+      "publishedAt": "2026-08-01T08:00:00.000Z",
+      "createdAt": "2026-08-01T08:00:00.000Z",
+      "updatedAt": "2026-08-01T08:00:00.000Z"
+    },
+    {
+      "id": "inv_02",
+      "eventId": "evt_mariage_marc_aminata",
+      "templateId": "classic-gold",
+      "title": "Mariage de Marc & Aminata",
+      "content": "Deux cœurs s'unissent pour l'éternité sous la bénédiction divine.",
+      "themeConfig": {
+        "accentColor": "#E05A47",
+        "fontDisplay": "Outfit"
+      },
+      "published": true,
+      "publishedAt": "2026-08-15T09:00:00.000Z",
+      "createdAt": "2026-08-15T09:00:00.000Z",
+      "updatedAt": "2026-08-15T09:00:00.000Z"
+    }
+  ],
+  "checkins": [
+    {
+      "id": "chk_01",
+      "eventId": "evt_30ans_ange",
+      "guestId": "gst_01",
+      "checkedInAt": "2026-09-26T20:15:00.000Z",
+      "checkedInBy": "agent_reception_01"
+    },
+    {
+      "id": "chk_02",
+      "eventId": "evt_30ans_ange",
+      "guestId": "gst_02",
+      "checkedInAt": "2026-09-26T20:45:00.000Z",
+      "checkedInBy": "agent_reception_01"
+    }
+  ]
+}
