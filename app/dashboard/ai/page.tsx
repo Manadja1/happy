@@ -33,6 +33,10 @@ export default function AiAssistantPage() {
   const [guestCount, setGuestCount] = useState<number>(100);
   const [baseUrl, setBaseUrl] = useState("https://happyevents.ci");
 
+  const [eventName, setEventName] = useState("30 ans d'Ange");
+  const [eventVenue, setEventVenue] = useState("Sofitel Hôtel Ivoire, Abidjan");
+  const [eventSlug, setEventSlug] = useState("ange-anniversaire-30");
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       setBaseUrl(window.location.origin);
@@ -41,6 +45,28 @@ export default function AiAssistantPage() {
       if (tabParam === "timeline" || tabParam === "whatsapp" || tabParam === "checklist" || tabParam === "calculator") {
         setActiveTab(tabParam);
       }
+
+      const evtId = params.get("eventId") || localStorage.getItem("happy_active_event_id") || "evt_30ans_ange";
+      fetch("/api/events")
+        .then((res) => res.json())
+        .then((json) => {
+          if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+            const found = json.data.find((e: any) => e.id === evtId) || json.data[0];
+            setEventName(found.name);
+            setEventVenue(found.location || "Abidjan");
+            setEventSlug(found.slug);
+          }
+        })
+        .catch(() => {});
+
+      fetch(`/api/events/${evtId}/stats`)
+        .then((res) => res.json())
+        .then((json) => {
+          if (json.success && json.data?.confirmedGuests > 0) {
+            setGuestCount(json.data.confirmedGuests);
+          }
+        })
+        .catch(() => {});
     }
   }, []);
 
@@ -50,7 +76,7 @@ export default function AiAssistantPage() {
     setTimeout(() => setCopied(null), 2500);
   };
 
-  const eventLink = `${baseUrl}/e/ange-anniversaire-30`;
+  const eventLink = `${baseUrl}/e/${eventSlug}`;
 
   // Calculated Catering & Drinks values based on guestCount
   const champagneBottles = Math.ceil(guestCount / 4);
@@ -64,7 +90,7 @@ export default function AiAssistantPage() {
   const cakePortions = guestCount;
 
   const cateringSummaryText = `🎉 *ESTIMATION BOISSONS & TRAITEUR — HAPPY EVENTS*
-Événement : 30 ans d'Ange (Sofitel Ivoire)
+Événement : ${eventName} (${eventVenue})
 Nombre de convives : ${guestCount} personnes
 
 🍾 *BOISSONS & BAR :*
@@ -78,9 +104,9 @@ Nombre de convives : ${guestCount} personnes
 🍢 *BUFFET & TRAITEUR :*
 • Amuse-bouches & Cocktail : ${canapesPieces} pièces (8 pièces/pers.)
 • Buffet chaud (Plats de résistance) : ${buffetPortions} portions (+15% de marge)
-• Gâteau d'anniversaire : ${cakePortions} parts
+• Gâteau d'événement : ${cakePortions} parts
 
-Calculé avec HAPPY AI Assistant • ${eventLink}`;
+Calculé via HAPPY EVENTS IA Assistant : ${eventLink}`;
 
   const whatsappTemplates = {
     vip: `🌟 *INVITATION VIP — 30 ANS D'ANGE* 🌟\n\nCher(e) ami(e),\nUne nouvelle décennie se célèbre entouré de ceux qui comptent le plus.\n\nJ'ai le plaisir de vous convier à une soirée d'exception :\n📅 *Samedi 26 Septembre 2026 dès 19h30*\n📍 *Sofitel Abidjan Hôtel Ivoire — Salle Chandelier*\n👔 *Dress Code : Chic & Élégant avec une touche d'Or*\n\nPour valider votre présence et recevoir votre pass QR Code sécurisé en 10 secondes :\n👉 ${eventLink}\n\nAu plaisir immense de célébrer ensemble !`,

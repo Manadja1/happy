@@ -25,6 +25,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
 import { Input } from "@/components/ui/input";
+import QRCode from "qrcode";
 
 export default function PublicEventPage({
   params,
@@ -40,11 +41,41 @@ export default function PublicEventPage({
   const [message, setMessage] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [createdQrToken, setCreatedQrToken] = useState<string | null>(null);
+  const [qrDataUrl, setQrDataUrl] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
 
+  React.useEffect(() => {
+    if (createdQrToken && typeof window !== "undefined") {
+      const payload = `${window.location.origin}/dashboard/checkin?token=${createdQrToken}`;
+      QRCode.toDataURL(payload, {
+        width: 280,
+        margin: 1.5,
+        color: {
+          dark: "#1A1A1A",
+          light: "#FFFFFF",
+        },
+      })
+        .then((url) => setQrDataUrl(url))
+        .catch(() => {});
+    }
+  }, [createdQrToken]);
+
+  const handleDownloadPass = () => {
+    if (!qrDataUrl) return;
+    const link = document.createElement("a");
+    link.href = qrDataUrl;
+    link.download = `pass-entree-${params.slug}-${createdQrToken || "invite"}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast("Pass officiel téléchargé avec succès !");
+  };
+
   // Event State with initial defaults
   const [eventData, setEventData] = useState<any>(null);
+  const [notFound, setNotFound] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   React.useEffect(() => {
     if (params.slug) {
@@ -53,9 +84,16 @@ export default function PublicEventPage({
         .then((json) => {
           if (json.success && json.data) {
             setEventData(json.data);
+          } else {
+            setNotFound(true);
           }
         })
-        .catch(() => {});
+        .catch(() => {
+          setNotFound(true);
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
     }
   }, [params.slug]);
 
@@ -136,6 +174,27 @@ export default function PublicEventPage({
       setIsSubmitting(false);
     }
   };
+
+  if (notFound) {
+    return (
+      <div className="min-h-screen bg-[#FAF8F5] flex flex-col items-center justify-center p-6 text-center">
+        <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-rose-100 text-rose-600 mb-4 shadow-soft">
+          <AlertCircle className="h-8 w-8" />
+        </div>
+        <h1 className="text-2xl font-black text-happy-ink-900 font-display">
+          Événement introuvable
+        </h1>
+        <p className="mt-2 text-sm text-happy-ink-600 max-w-sm">
+          Le lien d&apos;invitation n&apos;existe pas ou l&apos;événement a été retiré.
+        </p>
+        <Link href="/" className="mt-6">
+          <Button variant="primary">
+            Retour à l&apos;accueil
+          </Button>
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#FAF8F5] pb-24 text-happy-ink-900">
@@ -380,9 +439,18 @@ export default function PublicEventPage({
                     </span>
                   </div>
 
-                  <div className="my-2 p-4 bg-white rounded-2xl border border-amber-200 inline-block shadow-xs">
-                    <QrCode className="h-28 w-28 text-happy-ink-900 mx-auto" />
-                    <span className="text-[10px] font-mono text-happy-ink-500 mt-1 block font-semibold">
+                  <div className="my-2 p-3 bg-white rounded-2xl border border-amber-200 inline-block shadow-xs">
+                    {qrDataUrl ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={qrDataUrl}
+                        alt={`Pass QR Code ${createdQrToken}`}
+                        className="h-32 w-32 mx-auto rounded-lg object-contain"
+                      />
+                    ) : (
+                      <QrCode className="h-28 w-28 text-happy-ink-900 mx-auto animate-pulse" />
+                    )}
+                    <span className="text-[10px] font-mono text-happy-ink-600 mt-1.5 block font-bold">
                       Token : {createdQrToken || "tok_securise"}
                     </span>
                     <span className="text-[10px] text-happy-ink-400 block">
@@ -395,7 +463,7 @@ export default function PublicEventPage({
                       {guestName || "Invité d'Honneur"}
                     </h4>
                     <p className="text-xs text-emerald-700 font-bold mt-0.5">
-                      ✓ Présence confirmée • Sofitel Salle Chandelier
+                      ✓ Présence confirmée • {event.venue}
                     </p>
                   </div>
                 </div>
@@ -405,24 +473,23 @@ export default function PublicEventPage({
                     variant="whatsapp"
                     size="sm"
                     className="flex-1"
-                    onClick={() => {
-                      showToast("Billet enregistré sur votre appareil !");
-                    }}
+                    onClick={handleDownloadPass}
                     leftIcon={<Download className="h-4 w-4" />}
                   >
-                    Enregistrer le pass
+                    Télécharger le pass
                   </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
+                  <a
+                    href={`https://wa.me/?text=${encodeURIComponent(
+                      `J'ai confirmé ma présence à ${event.title} ! Voici le lien de l'événement : ${typeof window !== "undefined" ? window.location.href : ""}`
+                    )}`}
+                    target="_blank"
+                    rel="noreferrer"
                     className="flex-1"
-                    onClick={() => {
-                      setSubmitted(false);
-                      setRsvpModalOpen(false);
-                    }}
                   >
-                    Fermer
-                  </Button>
+                    <Button variant="secondary" size="sm" className="w-full" leftIcon={<MessageCircle className="h-4 w-4 text-emerald-600" />}>
+                      Partager WhatsApp
+                    </Button>
+                  </a>
                 </div>
               </div>
             ) : (

@@ -131,11 +131,11 @@ function CreateEventContent() {
         setName("30 ans d'Ange");
         setSelectedTemplate("midnight-sparkle");
       } else if (lower.includes("dot") || lower === "tradition") {
-        setType("TRADITIONAL");
+        setType("DOT");
         setName("Dot Coutumière de Koffi & Estelle");
         setSelectedTemplate("wax-chic");
-      } else if (lower.includes("gala")) {
-        setType("GALA");
+      } else if (lower.includes("gala") || lower.includes("corporate")) {
+        setType("CORPORATE");
         setName("Gala & Awards Tech 2026");
         setSelectedTemplate("classic-gold");
       }
@@ -149,14 +149,70 @@ function CreateEventContent() {
   }, [searchParams]);
 
   const handleAiFill = () => {
-    setName("Mariage de Marc & Aminata");
-    setType("WEDDING");
-    setDate("2026-10-17");
-    setStartTime("15:00");
-    setEndTime("02:00");
-    setVenue("Cathédrale Saint-Paul & Sofitel Ivoire, Abidjan");
-    setSelectedTemplate("classic-gold");
-    setGuestCount("200");
+    const text = aiPrompt.trim().toLowerCase();
+
+    // 1. Detect event type & template
+    let detectedType = "OTHER";
+    let detectedTemplate = "classic-gold";
+    let detectedName = "Célébration Spéciale";
+
+    if (text.includes("mariage") || text.includes("wedding") || text.includes("marier")) {
+      detectedType = "WEDDING";
+      detectedTemplate = "classic-gold";
+      detectedName = "Mariage de Célébration";
+    } else if (text.includes("anniversaire") || text.includes("birthday") || text.includes("ans")) {
+      detectedType = "BIRTHDAY";
+      detectedTemplate = "midnight-sparkle";
+      detectedName = "Anniversaire Festif";
+    } else if (text.includes("dot") || text.includes("coutume") || text.includes("tradition")) {
+      detectedType = "DOT";
+      detectedTemplate = "wax-chic";
+      detectedName = "Dot Coutumière Familiale";
+    } else if (text.includes("bapteme") || text.includes("communion")) {
+      detectedType = "BAPTISM";
+      detectedTemplate = "celestial-pure";
+      detectedName = "Baptême & Bénédiction";
+    } else if (text.includes("baby shower")) {
+      detectedType = "BABY_SHOWER";
+      detectedTemplate = "pastel-romance";
+      detectedName = "Baby Shower de Bienvenue";
+    } else if (text.includes("gala") || text.includes("entreprise") || text.includes("corporate")) {
+      detectedType = "CORPORATE";
+      detectedTemplate = "classic-gold";
+      detectedName = "Gala d'Entreprise & Cocktail";
+    }
+
+    // Try extracting names like "de Marc et Aminata" or "d'Ange"
+    const nameMatch = aiPrompt.match(/(?:mariage|anniversaire|dot|fête|célébration)\s+(?:de\s+|d['’])([^,\.0-9]+)/i);
+    if (nameMatch && nameMatch[1]) {
+      const extractedSubject = nameMatch[1].trim();
+      if (detectedType === "WEDDING") detectedName = `Mariage de ${extractedSubject}`;
+      else if (detectedType === "BIRTHDAY") detectedName = `Anniversaire de ${extractedSubject}`;
+      else if (detectedType === "DOT") detectedName = `Dot de ${extractedSubject}`;
+      else detectedName = `Événement de ${extractedSubject}`;
+    }
+
+    // 2. Extract guest count (e.g., "200 invités" or "150 personnes")
+    const guestMatch = aiPrompt.match(/(\d{2,4})\s*(?:invités?|personnes?|convives?)/i);
+    if (guestMatch && guestMatch[1]) {
+      setGuestCount(guestMatch[1]);
+    }
+
+    // 3. Extract venue (e.g., "à Abidjan", "au Sofitel")
+    const venueMatch = aiPrompt.match(/(?:à|au|dans|en)\s+([A-ZÀ-Ÿ][a-zà-ÿ]+(?:\s+[A-ZÀ-Ÿa-zà-ÿ]+){1,4})/);
+    if (venueMatch && venueMatch[1]) {
+      setVenue(venueMatch[1].trim());
+    }
+
+    // 4. Extract date if present
+    const isoDateMatch = aiPrompt.match(/(\d{4}-\d{2}-\d{2})/);
+    if (isoDateMatch) {
+      setDate(isoDateMatch[1]);
+    }
+
+    setName(detectedName);
+    setType(detectedType);
+    setSelectedTemplate(detectedTemplate);
     setActiveMode("step");
     setCurrentStep(1);
   };

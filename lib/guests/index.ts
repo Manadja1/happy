@@ -1,6 +1,7 @@
 import { store } from "@/lib/db/store";
 import { assertEventAccess } from "@/lib/auth/session";
 import { Guest, RsvpStatus } from "@/types";
+import { syncGuestToPostgres, deleteGuestFromPostgres } from "@/lib/db/sync";
 
 export interface CreateGuestInput {
   firstName: string;
@@ -53,7 +54,7 @@ export async function addGuestToEvent(
     throw new Error("VALIDATION_ERROR: Le prénom et le nom sont requis");
   }
 
-  return store.createGuest({
+  const guest = store.createGuest({
     eventId,
     firstName: input.firstName.trim(),
     lastName: input.lastName.trim(),
@@ -65,6 +66,8 @@ export async function addGuestToEvent(
     plusOneCount: input.plusOneCount || 0,
     rsvpStatus: input.rsvpStatus || "PENDING",
   });
+  await syncGuestToPostgres(guest);
+  return guest;
 }
 
 export async function updateGuestInEvent(
@@ -95,6 +98,7 @@ export async function updateGuestInEvent(
   if (!updated) {
     throw new Error("UPDATE_FAILED: Impossible de mettre à jour l'invité");
   }
+  await syncGuestToPostgres(updated);
   return updated;
 }
 
@@ -110,7 +114,11 @@ export async function deleteGuestFromEvent(
     throw new Error("NOT_FOUND: Invité introuvable dans cet événement");
   }
 
-  return store.deleteGuest(guestId);
+  const ok = store.deleteGuest(guestId);
+  if (ok) {
+    await deleteGuestFromPostgres(guestId);
+  }
+  return ok;
 }
 
 /**

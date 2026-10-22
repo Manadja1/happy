@@ -11,6 +11,16 @@ import {
   EventStatus,
   RsvpStatus,
 } from "@/types";
+import {
+  syncUserToPostgres,
+  syncEventToPostgres,
+  deleteEventFromPostgres,
+  syncGuestToPostgres,
+  deleteGuestFromPostgres,
+  syncRsvpToPostgres,
+  syncInvitationToPostgres,
+  syncCheckinToPostgres,
+} from "./sync";
 
 interface DataStoreSchema {
   users: User[];
@@ -31,7 +41,7 @@ const INITIAL_USER: User = {
   email: "ange.koffi@happyevents.ci",
   phone: "+225 07 00 11 22 33",
   avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
-  role: "OWNER",
+  role: "ADMIN",
   createdAt: new Date("2026-01-15T10:00:00.000Z"),
   updatedAt: new Date("2026-09-01T12:00:00.000Z"),
 };
@@ -381,8 +391,52 @@ class MemoryStore {
   }
 
   // --- Users ---
+  getAllUsers(): User[] {
+    return this.data.users;
+  }
+
   getUserById(id: string): User | null {
     return this.data.users.find((u) => u.id === id) || null;
+  }
+
+  getUserByEmail(email: string): User | null {
+    if (!email) return null;
+    const clean = email.trim().toLowerCase();
+    return this.data.users.find((u) => u.email && u.email.toLowerCase() === clean) || null;
+  }
+
+  getUserByPhone(phone: string): User | null {
+    if (!phone) return null;
+    const clean = phone.trim().replace(/[^0-9]/g, "");
+    return this.data.users.find((u) => u.phone && u.phone.replace(/[^0-9]/g, "") === clean) || null;
+  }
+
+  createUser(user: Omit<User, "id" | "createdAt" | "updatedAt">): User {
+    const id = "usr_" + Math.random().toString(36).substring(2, 9);
+    const newUser: User = {
+      ...user,
+      id,
+      passwordHash: user.passwordHash || null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.data.users.push(newUser);
+    this.persist();
+    syncUserToPostgres(newUser);
+    return newUser;
+  }
+
+  updateUser(id: string, updates: Partial<User>): User | null {
+    const idx = this.data.users.findIndex((u) => u.id === id);
+    if (idx === -1) return null;
+    this.data.users[idx] = {
+      ...this.data.users[idx],
+      ...updates,
+      updatedAt: new Date(),
+    };
+    this.persist();
+    syncUserToPostgres(this.data.users[idx]);
+    return this.data.users[idx];
   }
 
   // --- Events ---
@@ -410,6 +464,7 @@ class MemoryStore {
     };
     this.data.events.unshift(newEvent);
     this.persist();
+    syncEventToPostgres(newEvent);
     return newEvent;
   }
 
@@ -422,6 +477,7 @@ class MemoryStore {
       updatedAt: new Date(),
     };
     this.persist();
+    syncEventToPostgres(this.data.events[index]);
     return this.data.events[index];
   }
 
@@ -432,6 +488,7 @@ class MemoryStore {
     this.data.rsvps = this.data.rsvps.filter((r) => r.eventId !== id);
     this.data.checkins = this.data.checkins.filter((c) => c.eventId !== id);
     this.persist();
+    deleteEventFromPostgres(id);
     return this.data.events.length < initialLen;
   }
 
@@ -461,6 +518,7 @@ class MemoryStore {
     };
     this.data.guests.unshift(newGuest);
     this.persist();
+    syncGuestToPostgres(newGuest);
     return newGuest;
   }
 
@@ -485,6 +543,9 @@ class MemoryStore {
       created.push(newGuest);
     }
     this.persist();
+    for (const g of created) {
+      syncGuestToPostgres(g);
+    }
     return created;
   }
 
@@ -497,6 +558,7 @@ class MemoryStore {
       updatedAt: new Date(),
     };
     this.persist();
+    syncGuestToPostgres(this.data.guests[index]);
     return this.data.guests[index];
   }
 
@@ -506,6 +568,7 @@ class MemoryStore {
     this.data.rsvps = this.data.rsvps.filter((r) => r.guestId !== id);
     this.data.checkins = this.data.checkins.filter((c) => c.guestId !== id);
     this.persist();
+    deleteGuestFromPostgres(id);
     return this.data.guests.length < initialLen;
   }
 
@@ -545,6 +608,8 @@ class MemoryStore {
     }
 
     this.persist();
+    syncRsvpToPostgres(recordedRsvp);
+    if (guest) syncGuestToPostgres(guest);
     return recordedRsvp;
   }
 
@@ -581,8 +646,54 @@ class MemoryStore {
     };
     this.data.checkins.unshift(newCheckin);
     this.persist();
+    syncCheckinToPostgres(newCheckin);
+    syncGuestToPostgres(guest);
 
     return { success: true, checkin: newCheckin };
+  }
+
+  // --- Invitations ---
+  getInvitationByEventId(eventId: string): Invitation | null {
+    return this.data.invitations.find((i) => i.eventId === eventId) || null;
+  }
+
+  upsertInvitation(inv: {
+    eventId: string;
+    templateId?: string;
+    title: string;
+    content: string;
+    themeConfig?: Record<string, unknown> | null;
+    published?: boolean;
+  }): Invitation {
+    const idx = this.data.invitations.findIndex((i) => i.eventId === inv.eventId);
+    if (idx !== -1) {
+      this.data.invitations[idx] = {
+        ...this.data.invitations[idx],
+        ...inv,
+        templateId: inv.templateId || this.data.invitations[idx].templateId,
+        updatedAt: new Date(),
+      };
+      this.persist();
+      syncInvitationToPostgres(this.data.invitations[idx]);
+      return this.data.invitations[idx];
+    } else {
+      const newInv: Invitation = {
+        id: "inv_" + Math.random().toString(36).substring(2, 9),
+        eventId: inv.eventId,
+        templateId: inv.templateId || "classic-gold",
+        title: inv.title,
+        content: inv.content,
+        themeConfig: inv.themeConfig || null,
+        published: inv.published ?? true,
+        publishedAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      this.data.invitations.unshift(newInv);
+      this.persist();
+      syncInvitationToPostgres(newInv);
+      return newInv;
+    }
   }
 
   // --- Statistics ---
@@ -613,6 +724,127 @@ class MemoryStore {
       checkedInCount,
       responseRate,
       checkinRate,
+    };
+  }
+
+  // --- Platform-wide Admin Oversight ---
+  getAllEvents(): Event[] {
+    return [...this.data.events].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  }
+
+  getAllGuests(): Guest[] {
+    return [...this.data.guests];
+  }
+
+  getAllCheckins(): Checkin[] {
+    return [...this.data.checkins].sort(
+      (a, b) => new Date(b.checkedInAt).getTime() - new Date(a.checkedInAt).getTime()
+    );
+  }
+
+  getAllRsvps(): RSVP[] {
+    return [...this.data.rsvps];
+  }
+
+  deleteUser(id: string): boolean {
+    const initialLen = this.data.users.length;
+    this.data.users = this.data.users.filter((u) => u.id !== id);
+    // Delete user's events and related data
+    const userEvents = this.data.events.filter((e) => e.ownerId === id);
+    for (const e of userEvents) {
+      this.deleteEvent(e.id);
+    }
+    this.persist();
+    return this.data.users.length < initialLen;
+  }
+
+  getGlobalPlatformStats() {
+    const users = this.getAllUsers();
+    const events = this.getAllEvents();
+    const guests = this.getAllGuests();
+    const checkins = this.getAllCheckins();
+    const rsvps = this.getAllRsvps();
+
+    const totalUsers = users.length;
+    const totalEvents = events.length;
+    const publishedEvents = events.filter((e) => e.status === "PUBLISHED").length;
+    const draftEvents = events.filter((e) => e.status === "DRAFT").length;
+    const completedEvents = events.filter((e) => e.status === "COMPLETED").length;
+
+    const totalGuests = guests.length;
+    const confirmedGuests = guests.filter((g) => g.rsvpStatus === "CONFIRMED").length;
+    const pendingGuests = guests.filter((g) => g.rsvpStatus === "PENDING").length;
+    const vipGuests = guests.filter((g) => g.isVip).length;
+
+    const totalCheckins = checkins.length;
+    const globalCheckinRate = confirmedGuests > 0 ? Math.round((totalCheckins / confirmedGuests) * 100) : 0;
+
+    // Simulated business revenue volume (FCFA)
+    const estimatedVolumeFcfa = publishedEvents * 15000 + completedEvents * 35000;
+
+    // Breakdown by event type
+    const eventsByType = {
+      WEDDING: events.filter((e) => e.type === "WEDDING").length,
+      BIRTHDAY: events.filter((e) => e.type === "BIRTHDAY").length,
+      DOT: events.filter((e) => e.type === "DOT").length,
+      CORPORATE: events.filter((e) => e.type === "CORPORATE").length,
+      OTHER: events.filter((e) => !["WEDDING", "BIRTHDAY", "DOT", "CORPORATE"].includes(e.type)).length,
+    };
+
+    // Global unified audit & activity stream
+    const userActivities = users.map((u) => ({
+      id: "act_usr_" + u.id,
+      type: "USER_SIGNUP" as const,
+      title: "Nouvel organisateur inscrit",
+      description: `${u.name || "Organisateur"} (${u.email})`,
+      timestamp: u.createdAt,
+      avatar: u.avatar,
+      badge: u.role,
+    }));
+
+    const eventActivities = events.map((e) => ({
+      id: "act_evt_" + e.id,
+      type: "EVENT_CREATED" as const,
+      title: "Événement créé",
+      description: `${e.name} — ${e.venue || "Lieu à confirmer"}`,
+      timestamp: e.createdAt,
+      badge: e.status,
+    }));
+
+    const checkinActivities = checkins.map((c) => {
+      const g = guests.find((guest) => guest.id === c.guestId);
+      const e = events.find((evt) => evt.id === c.eventId);
+      return {
+        id: "act_chk_" + c.id,
+        type: "CHECKIN_SUCCESS" as const,
+        title: "Check-in QR code scanné",
+        description: `${g ? `${g.firstName} ${g.lastName}` : "Invité"} sur « ${e?.name || "Événement"} »`,
+        timestamp: c.checkedInAt,
+        badge: "VÉRIFIÉ",
+      };
+    });
+
+    const recentActivity = [...userActivities, ...eventActivities, ...checkinActivities]
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      .slice(0, 15);
+
+    return {
+      totalUsers,
+      totalEvents,
+      publishedEvents,
+      draftEvents,
+      completedEvents,
+      totalGuests,
+      confirmedGuests,
+      pendingGuests,
+      vipGuests,
+      totalCheckins,
+      globalCheckinRate,
+      estimatedVolumeFcfa,
+      eventsByType,
+      recentActivity,
     };
   }
 }

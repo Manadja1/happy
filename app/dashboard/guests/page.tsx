@@ -7,6 +7,8 @@ import {
   Search,
   Plus,
   Download,
+  Upload,
+  FileText,
   MessageCircle,
   CheckCircle2,
   Clock,
@@ -18,13 +20,15 @@ import {
   X,
   Share2,
   Filter,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
 import { Modal } from "@/components/ui/modal";
-import { Input } from "@/components/ui/input";
+import { Input, Textarea } from "@/components/ui/input";
 
 interface Guest {
   id: string;
@@ -152,9 +156,62 @@ const INITIAL_GUESTS: Guest[] = [
 ];
 
 export default function GuestsPage() {
-  const [guests, setGuests] = useState<Guest[]>(INITIAL_GUESTS);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentEventName, setCurrentEventName] = useState<string>("Mon Événement");
+  const [guests, setGuests] = useState<Guest[]>([]);
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState<"ALL" | "CONFIRMED" | "PENDING" | "CHECKEDIN" | "VIP">("ALL");
+  const [activeEventId, setActiveEventId] = useState<string>("");
+
+  React.useEffect(() => {
+    // 1. Fetch user session
+    fetch("/api/auth/session")
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.success && json.data?.user) {
+          setCurrentUser(json.data.user);
+        }
+      })
+      .catch(() => {});
+
+    // 2. Fetch user events
+    fetch("/api/events")
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+          const stored = typeof window !== "undefined" ? localStorage.getItem("happy_active_event_id") : null;
+          const target = (stored && json.data.find((e: any) => e.id === stored)) || json.data[0];
+          setActiveEventId(target.id);
+          setCurrentEventName(target.name);
+          setEventLink(`${typeof window !== "undefined" ? window.location.origin : "https://happyevents.ci"}/e/${target.slug}`);
+
+          // 3. Fetch guests for this active event
+          fetch(`/api/guests?eventId=${target.id}`)
+            .then((r) => r.json())
+            .then((gJson) => {
+              if (gJson.success && Array.isArray(gJson.data)) {
+                const mapped: Guest[] = gJson.data.map((g: any) => ({
+                  id: g.id,
+                  name: `${g.firstName} ${g.lastName}`.trim(),
+                  phone: g.phone || "+225 -- -- -- --",
+                  group: g.group || "Invités",
+                  isVip: Boolean(g.isVip),
+                  status: g.rsvpStatus || "PENDING",
+                  plusOne: g.plusOneCount || 0,
+                  checkedIn: Boolean(g.checkedIn),
+                  confirmedAt: "Récemment",
+                }));
+                setGuests(mapped);
+              }
+            })
+            .catch(() => {});
+        } else if (json.success && Array.isArray(json.data) && json.data.length === 0) {
+          setGuests([]);
+          setCurrentEventName("Aucun événement");
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // Modal State for Adding Guest
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -165,40 +222,250 @@ export default function GuestsPage() {
   const [newIsVip, setNewIsVip] = useState(false);
   const [notificationMsg, setNotificationMsg] = useState("");
 
+  // Modal State for CSV Import
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [csvText, setCsvText] = useState("");
+  const [isImporting, setIsImporting] = useState(false);
+
   // Modal State for Guest Details
   const [selectedGuest, setSelectedGuest] = useState<Guest | null>(null);
   const [eventLink, setEventLink] = useState("https://happyevents.ci/e/ange-anniversaire-30");
 
-  React.useEffect(() => {
-    if (typeof window !== "undefined") {
-      setEventLink(`${window.location.origin}/e/ange-anniversaire-30`);
+  // Edit & Delete modal states
+  const [editingGuest, setEditingGuest] = useState<Guest | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editGroup, setEditGroup] = useState("Amis");
+  const [editPlusOne, setEditPlusOne] = useState(0);
+  const [editIsVip, setEditIsVip] = useState(false);
+  const [editStatus, setEditStatus] = useState<"CONFIRMED" | "PENDING" | "DECLINED">("PENDING");
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  const [deletingGuest, setDeletingGuest] = useState<Guest | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const openEditModal = (guest: Guest) => {
+    setEditingGuest(guest);
+    setEditName(guest.name);
+    setEditPhone(guest.phone);
+    setEditGroup(guest.group);
+    setEditPlusOne(guest.plusOne);
+    setEditIsVip(guest.isVip);
+    setEditStatus(guest.status);
+    setSelectedGuest(null);
+  };
+
+  const handleUpdateGuest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingGuest || !editName.trim()) return;
+    setIsUpdating(true);
+
+    const parts = editName.trim().split(/\s+/);
+    const firstName = parts[0] || "Invité";
+    const lastName = parts.slice(1).join(" ") || "";
+
+    try {
+      const res = await fetch(`/api/guests/${editingGuest.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          eventId: activeEventId,
+          firstName,
+          lastName,
+          phone: editPhone.trim(),
+          group: editGroup,
+          plusOneCount: Number(editPlusOne),
+          isVip: editIsVip,
+          rsvpStatus: editStatus,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error?.message || "Erreur de mise à jour");
+      }
+
+      setGuests((prev) =>
+        prev.map((g) =>
+          g.id === editingGuest.id
+            ? {
+                ...g,
+                name: editName.trim(),
+                phone: editPhone.trim(),
+                group: editGroup,
+                plusOne: Number(editPlusOne),
+                isVip: editIsVip,
+                status: editStatus,
+              }
+            : g
+        )
+      );
+
+      setNotificationMsg(`Invité "${editName.trim()}" modifié avec succès !`);
+      setTimeout(() => setNotificationMsg(""), 3500);
+      setEditingGuest(null);
+    } catch (err: any) {
+      setNotificationMsg(err.message || "Erreur lors de la modification");
+    } finally {
+      setIsUpdating(false);
     }
+  };
+
+  const handleDeleteGuest = async () => {
+    if (!deletingGuest) return;
+    setIsDeleting(true);
+
+    try {
+      const res = await fetch(`/api/guests/${deletingGuest.id}?eventId=${activeEventId}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error?.message || "Erreur lors de la suppression");
+      }
+
+      setGuests((prev) => prev.filter((g) => g.id !== deletingGuest.id));
+      setNotificationMsg(`Invité "${deletingGuest.name}" retiré avec succès.`);
+      setTimeout(() => setNotificationMsg(""), 3500);
+      setDeletingGuest(null);
+      setSelectedGuest(null);
+    } catch (err: any) {
+      setNotificationMsg(err.message || "Erreur lors de la suppression");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const loadGuests = React.useCallback((eventId: string) => {
+    fetch(`/api/guests?eventId=${eventId}`)
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+          const apiGuests: Guest[] = json.data.map((g: any) => ({
+            id: g.id,
+            name: `${g.firstName} ${g.lastName}`.trim(),
+            phone: g.phone || "+225 -- -- -- --",
+            group: g.group || "Invités",
+            isVip: Boolean(g.isVip),
+            status: g.rsvpStatus || "PENDING",
+            plusOne: g.plusOneCount || 0,
+            checkedIn: Boolean(g.checkedIn),
+            dietary: g.dietaryPreference || undefined,
+          }));
+          setGuests(apiGuests);
+        }
+      })
+      .catch(() => {});
   }, []);
 
-  const handleAddGuest = (e: React.FormEvent) => {
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const evtId = params.get("eventId") || localStorage.getItem("happy_active_event_id") || "evt_30ans_ange";
+      setActiveEventId(evtId);
+      setEventLink(`${window.location.origin}/e/ange-anniversaire-30`);
+      loadGuests(evtId);
+    }
+  }, [loadGuests]);
+
+  const handleAddGuest = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName.trim()) return;
 
-    const createdGuest: Guest = {
-      id: "gst_" + Date.now(),
-      name: newName,
-      phone: newPhone || "+225 -- -- -- --",
-      group: newGroup,
-      isVip: newIsVip,
-      status: "PENDING",
-      plusOne: Number(newPlusOne),
-      checkedIn: false,
+    const parts = newName.trim().split(/\s+/);
+    const firstName = parts[0] || "Invité";
+    const lastName = parts.slice(1).join(" ") || "";
+
+    try {
+      const res = await fetch("/api/guests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          eventId: activeEventId,
+          firstName,
+          lastName,
+          phone: newPhone.trim() || undefined,
+          group: newGroup,
+          isVip: newIsVip,
+          plusOneAllowed: Number(newPlusOne) > 0,
+          plusOneCount: Number(newPlusOne),
+          rsvpStatus: "PENDING",
+        }),
+      });
+
+      const json = await res.json();
+      if (json.success && json.data) {
+        const createdGuest: Guest = {
+          id: json.data.id,
+          name: `${json.data.firstName} ${json.data.lastName}`.trim(),
+          phone: json.data.phone || newPhone || "+225 -- -- -- --",
+          group: json.data.group || newGroup,
+          isVip: json.data.isVip,
+          status: json.data.rsvpStatus || "PENDING",
+          plusOne: json.data.plusOneCount || Number(newPlusOne),
+          checkedIn: false,
+        };
+        setGuests((prev) => [createdGuest, ...prev]);
+        setNotificationMsg(`Invité "${createdGuest.name}" ajouté avec succès !`);
+      } else {
+        alert(json.error?.message || "Erreur lors de l'ajout de l'invité");
+      }
+    } catch (err: any) {
+      alert("Erreur de connexion : " + err.message);
+    } finally {
+      setNewName("");
+      setNewPhone("");
+      setNewPlusOne(0);
+      setNewIsVip(false);
+      setAddModalOpen(false);
+      setTimeout(() => setNotificationMsg(""), 3500);
+    }
+  };
+
+  const handleImportCSV = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!csvText.trim()) return;
+    setIsImporting(true);
+
+    try {
+      const res = await fetch("/api/guests/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          eventId: activeEventId,
+          csvText,
+        }),
+      });
+
+      const json = await res.json();
+      if (json.success && json.data) {
+        setNotificationMsg(
+          `Importation réussie : ${json.data.importedCount} invité(s) ajouté(s) à la liste !`
+        );
+        loadGuests(activeEventId);
+        setImportModalOpen(false);
+        setCsvText("");
+      } else {
+        alert(json.error?.message || "Erreur lors de l'importation");
+      }
+    } catch (err: any) {
+      alert("Erreur réseau : " + err.message);
+    } finally {
+      setIsImporting(false);
+      setTimeout(() => setNotificationMsg(""), 4000);
+    }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result;
+      if (typeof content === "string") {
+        setCsvText(content);
+      }
     };
-
-    setGuests([createdGuest, ...guests]);
-    setNewName("");
-    setNewPhone("");
-    setNewPlusOne(0);
-    setNewIsVip(false);
-    setAddModalOpen(false);
-
-    setNotificationMsg(`Invité "${createdGuest.name}" ajouté avec succès !`);
-    setTimeout(() => setNotificationMsg(""), 3500);
+    reader.readAsText(file);
   };
 
   const handleExportCSV = () => {
@@ -224,10 +491,24 @@ export default function GuestsPage() {
     setTimeout(() => setNotificationMsg(""), 3500);
   };
 
-  const toggleCheckIn = (id: string) => {
+  const toggleCheckIn = async (id: string) => {
+    const target = guests.find((g) => g.id === id);
+    if (!target) return;
+    const newChecked = !target.checkedIn;
     setGuests((prev) =>
-      prev.map((g) => (g.id === id ? { ...g, checkedIn: !g.checkedIn } : g))
+      prev.map((g) => (g.id === id ? { ...g, checkedIn: newChecked } : g))
     );
+
+    try {
+      await fetch(`/api/guests/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          eventId: activeEventId,
+          checkedIn: newChecked,
+        }),
+      });
+    } catch {}
   };
 
   const filteredGuests = guests.filter((g) => {
@@ -280,6 +561,14 @@ export default function GuestsPage() {
           <Button
             variant="secondary"
             size="sm"
+            onClick={() => setImportModalOpen(true)}
+            leftIcon={<Upload className="h-4 w-4 text-happy-coral-500" />}
+          >
+            Importer CSV
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={handleExportCSV}
             leftIcon={<Download className="h-4 w-4" />}
           >
@@ -297,14 +586,14 @@ export default function GuestsPage() {
         </div>
       </div>
 
-      {/* 0. ORGANIZER PROFILE & EVENT CONTEXT (Clairement visible sur mobile et desktop) */}
+      {/* 0. ORGANIZER PROFILE & EVENT CONTEXT */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-3xl bg-gradient-to-r from-happy-sand-100 via-white to-amber-50/60 border border-happy-ink-100 shadow-2xs">
         <div className="flex items-center gap-3">
           <div className="relative shrink-0">
             <Avatar
-              name="Ange Koffi"
+              name={currentUser?.name || "Organisateur"}
               size="lg"
-              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80"
+              src={currentUser?.avatar || undefined}
               isVip={true}
             />
             <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-white text-[10px] font-bold shadow-xs">
@@ -314,16 +603,20 @@ export default function GuestsPage() {
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <h2 className="text-sm sm:text-base font-black text-happy-ink-900 truncate">
-                Ange Koffi
+                {currentUser?.name || "Organisateur"}
               </h2>
               <span className="rounded-full bg-happy-coral-100 text-happy-coral-700 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide shrink-0">
                 Organisateur Principal
               </span>
             </div>
             <p className="text-xs text-happy-ink-500 mt-0.5 flex items-center gap-2 flex-wrap">
-              <span className="truncate">ange.koffi@happyevents.ci</span>
-              <span className="hidden xs:inline">•</span>
-              <span className="font-mono text-happy-ink-700 font-semibold shrink-0">+225 07 48 19 20 11</span>
+              <span className="truncate">{currentUser?.email || "Email non renseigné"}</span>
+              {currentUser?.phone && (
+                <>
+                  <span className="hidden xs:inline">•</span>
+                  <span className="font-mono text-happy-ink-700 font-semibold shrink-0">{currentUser.phone}</span>
+                </>
+              )}
             </p>
           </div>
         </div>
@@ -334,7 +627,7 @@ export default function GuestsPage() {
               Événement en cours
             </span>
             <span className="text-xs font-bold text-happy-coral-600 truncate block">
-              30 ans d&apos;Ange 🎉
+              {currentEventName}
             </span>
           </div>
           <Link href="/dashboard/settings">
@@ -520,7 +813,7 @@ export default function GuestsPage() {
                   </td>
 
                   {/* Actions */}
-                  <td className="p-4 text-right space-x-2">
+                  <td className="p-4 text-right space-x-1.5 whitespace-nowrap">
                     {guest.status === "PENDING" && (
                       <a
                         href={`https://wa.me/${guest.phone.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(
@@ -528,13 +821,27 @@ export default function GuestsPage() {
                         )}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center gap-1 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-1 hover:bg-emerald-100 transition-colors font-semibold"
+                        className="inline-flex items-center gap-1 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-1 hover:bg-emerald-100 transition-colors font-semibold"
                         title="Relancer sur WhatsApp"
                       >
                         <MessageCircle className="h-3.5 w-3.5" />
                         <span className="hidden sm:inline">Relance</span>
                       </a>
                     )}
+                    <button
+                      onClick={() => openEditModal(guest)}
+                      className="rounded-xl border border-happy-ink-200 p-1.5 text-happy-ink-600 hover:text-happy-coral-600 hover:bg-happy-sand-100 transition-colors"
+                      title="Modifier cet invité"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      onClick={() => setDeletingGuest(guest)}
+                      className="rounded-xl border border-rose-200 p-1.5 text-rose-500 hover:bg-rose-50 hover:text-rose-700 transition-colors"
+                      title="Supprimer cet invité"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
                     <button
                       onClick={() => setSelectedGuest(guest)}
                       className="rounded-xl border border-happy-ink-200 px-2.5 py-1 text-happy-ink-700 hover:bg-happy-sand-100 transition-colors font-semibold"
@@ -746,6 +1053,77 @@ export default function GuestsPage() {
         </form>
       </Modal>
 
+      {/* CSV Import Modal */}
+      <Modal
+        isOpen={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        title="Importer une liste d'invités (CSV)"
+        description="Copiez-collez vos lignes CSV ou téléversez un fichier avec les colonnes : Nom, Prénom, Téléphone, Groupe, VIP, +1"
+      >
+        <form onSubmit={handleImportCSV} className="space-y-4 pt-2">
+          {/* File Upload Zone */}
+          <div className="rounded-2xl border-2 border-dashed border-happy-ink-200 bg-happy-sand-50/60 p-4 text-center hover:bg-happy-sand-100/60 transition-colors">
+            <label className="cursor-pointer block">
+              <Upload className="mx-auto h-8 w-8 text-happy-coral-500 mb-1" />
+              <span className="text-xs font-bold text-happy-ink-800 block">
+                Téléverser un fichier .CSV
+              </span>
+              <span className="text-[10px] text-happy-ink-400 block mt-0.5">
+                Format compatible Excel, Numbers, Google Sheets
+              </span>
+              <input
+                type="file"
+                accept=".csv,text/csv"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+            </label>
+          </div>
+
+          <div className="relative flex py-1 items-center">
+            <div className="flex-grow border-t border-happy-ink-200" />
+            <span className="flex-shrink mx-3 text-[10px] font-bold uppercase tracking-wider text-happy-ink-400">
+              Ou coller directement le texte CSV
+            </span>
+            <div className="flex-grow border-t border-happy-ink-200" />
+          </div>
+
+          <Textarea
+            label="Contenu CSV"
+            placeholder={"Nom,Prénom,Téléphone,Groupe,VIP,+1\nKoffi,Marc,+22507001122,Famille,Oui,1\nDiallo,Aminata,+22505112233,Amis,Non,0"}
+            value={csvText}
+            onChange={(e) => setCsvText(e.target.value)}
+            className="font-mono text-xs min-h-[120px]"
+          />
+
+          <div className="rounded-xl bg-amber-50 border border-amber-200 p-2.5 text-[11px] text-amber-900 space-y-1">
+            <p className="font-bold">Astuce :</p>
+            <p>
+              Les colonnes sont détectées automatiquement. Vous pouvez exporter depuis Excel ou Google Sheets et coller les données ici.
+            </p>
+          </div>
+
+          <div className="pt-2 flex justify-end gap-3">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setImportModalOpen(false)}
+            >
+              Annuler
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              disabled={isImporting || !csvText.trim()}
+              isLoading={isImporting}
+              leftIcon={<Upload className="h-4 w-4" />}
+            >
+              Lancer l'importation
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
       {/* Guest Details Modal */}
       {selectedGuest && (
         <Modal
@@ -776,25 +1154,187 @@ export default function GuestsPage() {
               )}
             </div>
 
-            <div className="pt-4 flex justify-between">
-              <a
-                href={`https://wa.me/?text=${encodeURIComponent(
-                  `Bonjour ${selectedGuest.name}, voici votre invitation : ${eventLink}`
-                )}`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                <Button variant="whatsapp" size="sm" leftIcon={<MessageCircle className="h-4 w-4" />}>
-                  WhatsApp
+            <div className="pt-4 flex items-center justify-between gap-2 border-t border-happy-ink-100">
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => openEditModal(selectedGuest)}
+                  leftIcon={<Pencil className="h-3.5 w-3.5" />}
+                >
+                  Modifier
                 </Button>
-              </a>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setDeletingGuest(selectedGuest)}
+                  className="text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                  leftIcon={<Trash2 className="h-3.5 w-3.5" />}
+                >
+                  Supprimer
+                </Button>
+              </div>
 
+              <div className="flex items-center gap-2">
+                <a
+                  href={`https://wa.me/${selectedGuest.phone.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(
+                    `Bonjour ${selectedGuest.name}, voici votre invitation officielle : ${eventLink}`
+                  )}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <Button variant="whatsapp" size="sm" leftIcon={<MessageCircle className="h-4 w-4" />}>
+                    WhatsApp
+                  </Button>
+                </a>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setSelectedGuest(null)}
+                >
+                  Fermer
+                </Button>
+              </div>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Edit Guest Modal */}
+      {editingGuest && (
+        <Modal
+          isOpen={true}
+          onClose={() => setEditingGuest(null)}
+          title={`Modifier l'invité : ${editingGuest.name}`}
+          description="Mettez à jour les coordonnées, le groupe ou le statut RSVP de cet invité."
+        >
+          <form onSubmit={handleUpdateGuest} className="space-y-4 pt-2">
+            <Input
+              label="Nom & Prénom"
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              required
+            />
+
+            <Input
+              label="Numéro WhatsApp"
+              value={editPhone}
+              onChange={(e) => setEditPhone(e.target.value)}
+            />
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-happy-ink-700 mb-1.5">
+                  Groupe
+                </label>
+                <select
+                  value={editGroup}
+                  onChange={(e) => setEditGroup(e.target.value)}
+                  className="w-full rounded-2xl border border-happy-ink-200 bg-white px-3 py-2 text-xs font-medium text-happy-ink-900 focus:border-happy-coral-500 focus:outline-none"
+                >
+                  <option value="Famille proche">Famille proche</option>
+                  <option value="Amis d'enfance">Amis d'enfance</option>
+                  <option value="Amis">Amis</option>
+                  <option value="Collègues">Collègues</option>
+                  <option value="Partenaires">Partenaires</option>
+                  <option value="Promotion HEC">Promotion HEC</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-happy-ink-700 mb-1.5">
+                  Statut RSVP
+                </label>
+                <select
+                  value={editStatus}
+                  onChange={(e) => setEditStatus(e.target.value as any)}
+                  className="w-full rounded-2xl border border-happy-ink-200 bg-white px-3 py-2 text-xs font-medium text-happy-ink-900 focus:border-happy-coral-500 focus:outline-none"
+                >
+                  <option value="CONFIRMED">Confirmé</option>
+                  <option value="PENDING">En attente</option>
+                  <option value="DECLINED">Décliné</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 items-center pt-1">
+              <div>
+                <label className="block text-xs font-bold text-happy-ink-700 mb-1.5">
+                  Accompagnant (+1)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="5"
+                  value={editPlusOne}
+                  onChange={(e) => setEditPlusOne(Number(e.target.value))}
+                  className="w-full rounded-2xl border border-happy-ink-200 bg-white px-3 py-2 text-xs font-medium text-happy-ink-900 focus:border-happy-coral-500 focus:outline-none"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 pt-5">
+                <input
+                  type="checkbox"
+                  id="editVipCheck"
+                  checked={editIsVip}
+                  onChange={(e) => setEditIsVip(e.target.checked)}
+                  className="h-4 w-4 rounded border-happy-ink-300 text-happy-coral-500 focus:ring-happy-coral-500"
+                />
+                <label htmlFor="editVipCheck" className="text-xs font-bold text-happy-ink-800">
+                  Invité VIP 👑
+                </label>
+              </div>
+            </div>
+
+            <div className="pt-4 flex justify-end gap-3 border-t border-happy-ink-100">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setEditingGuest(null)}
+              >
+                Annuler
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                disabled={isUpdating}
+                isLoading={isUpdating}
+              >
+                {isUpdating ? "Enregistrement..." : "Mettre à jour"}
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deletingGuest && (
+        <Modal
+          isOpen={true}
+          onClose={() => setDeletingGuest(null)}
+          title="Supprimer cet invité ?"
+          description={`Êtes-vous sûr de vouloir retirer "${deletingGuest.name}" de la liste ? Son invitation et son QR code seront révoqués.`}
+        >
+          <div className="space-y-4 pt-2">
+            <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-800 leading-relaxed">
+              ⚠️ Cette action est irréversible. L'invité ne pourra plus accéder à l'événement ni valider son entrée.
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2">
               <Button
                 variant="secondary"
-                size="sm"
-                onClick={() => setSelectedGuest(null)}
+                onClick={() => setDeletingGuest(null)}
               >
-                Fermer
+                Annuler
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleDeleteGuest}
+                disabled={isDeleting}
+                isLoading={isDeleting}
+                className="bg-rose-600 hover:bg-rose-700 text-white shadow-soft"
+              >
+                {isDeleting ? "Suppression..." : "Confirmer la suppression"}
               </Button>
             </div>
           </div>

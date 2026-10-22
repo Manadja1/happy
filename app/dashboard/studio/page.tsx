@@ -67,16 +67,89 @@ export default function StudioPage() {
     "Nous avons l'immense honneur de vous convier à célébrer ce moment exceptionnel avec nous."
   );
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
+  const [activeEventId, setActiveEventId] = useState("evt_30ans_ange");
+  const [activeSlug, setActiveSlug] = useState("ange-anniversaire-30");
 
-  const handleSave = () => {
-    setSavedSuccess(true);
-    setTimeout(() => setSavedSuccess(false), 3000);
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const evtId = params.get("eventId") || localStorage.getItem("happy_active_event_id") || "evt_30ans_ange";
+      setActiveEventId(evtId);
+
+      // Fetch existing invitation for this event
+      fetch(`/api/invitations?eventId=${evtId}`)
+        .then((r) => r.json())
+        .then((json) => {
+          if (json.success && json.data) {
+            const inv = json.data;
+            if (inv.title) setTitle(inv.title);
+            if (inv.content) setWelcomeMessage(inv.content);
+            if (inv.templateId) {
+              const found = STUDIO_TEMPLATES.find((t) => t.id === inv.templateId);
+              if (found) setActiveTemplate(found);
+            }
+            if (inv.themeConfig?.subtitle) setSubtitle(inv.themeConfig.subtitle);
+            if (inv.themeConfig?.date) setDate(inv.themeConfig.date);
+            if (inv.themeConfig?.venue) setVenue(inv.themeConfig.venue);
+          }
+        })
+        .catch(() => {});
+
+      // Fetch event slug
+      fetch(`/api/events/${evtId}`)
+        .then((r) => r.json())
+        .then((json) => {
+          if (json.success && json.data?.slug) {
+            setActiveSlug(json.data.slug);
+          }
+        })
+        .catch(() => {});
+    }
+  }, []);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const res = await fetch("/api/invitations", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          eventId: activeEventId,
+          templateId: activeTemplate.id,
+          title,
+          content: welcomeMessage,
+          themeConfig: {
+            subtitle,
+            date,
+            venue,
+            accentColor: activeTemplate.borderColor,
+            bgGradient: activeTemplate.bgGradient,
+          },
+          published: true,
+        }),
+      });
+
+      const json = await res.json();
+      if (json.success) {
+        setSavedSuccess(true);
+        setToastMsg("Modèle et textes d'invitation enregistrés avec succès !");
+        setTimeout(() => setSavedSuccess(false), 3000);
+      } else {
+        alert(json.error?.message || "Erreur lors de l'enregistrement");
+      }
+    } catch (err: any) {
+      alert("Erreur réseau : " + err.message);
+    } finally {
+      setIsSaving(false);
+      setTimeout(() => setToastMsg(""), 3500);
+    }
   };
 
   const handleShareWhatsApp = () => {
     const origin = typeof window !== "undefined" ? window.location.origin : "https://happyevents.ci";
-    const link = `${origin}/e/ange-anniversaire-30`;
+    const link = `${origin}/e/${activeSlug}`;
     const message = `🌟 *INVITATION — ${title.toUpperCase()}* 🌟\n\n« ${welcomeMessage} »\n\n📅 *Date :* ${date}\n📍 *Lieu :* ${venue}\n\n👉 Confirmez votre présence et obtenez votre pass d'entrée : ${link}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, "_blank");
     setToastMsg("Carton d'invitation prêt sur WhatsApp !");

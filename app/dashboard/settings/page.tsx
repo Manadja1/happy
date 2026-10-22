@@ -21,19 +21,57 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 
 export default function SettingsPage() {
-  const [name, setName] = useState("Ange Koffi");
-  const [email, setEmail] = useState("ange.koffi@example.ci");
-  const [whatsapp, setWhatsapp] = useState("+225 07 12 34 56 78");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
   const [country, setCountry] = useState("CI");
   const [currency, setCurrency] = useState("XOF");
   const [strictQr, setStrictQr] = useState(true);
   const [notifyDuplicates, setNotifyDuplicates] = useState(true);
   const [saved, setSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
 
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3500);
+  React.useEffect(() => {
+    fetch("/api/auth/session")
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.success && json.data?.user) {
+          setName(json.data.user.name || "");
+          setEmail(json.data.user.email || "");
+          setWhatsapp(json.data.user.phone || "");
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleSave = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setIsSaving(true);
+    setErrorMsg("");
+
+    try {
+      const res = await fetch("/api/auth/session", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          email,
+          phone: whatsapp,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error?.message || "Erreur lors de l'enregistrement");
+      }
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3500);
+    } catch (err: any) {
+      setErrorMsg(err.message || "Erreur de connexion");
+      setTimeout(() => setErrorMsg(""), 4000);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -43,6 +81,11 @@ export default function SettingsPage() {
         <div className="fixed top-20 right-6 z-50 rounded-2xl bg-emerald-600 px-5 py-3 text-white shadow-xl animate-fadeIn flex items-center gap-2 text-xs font-bold">
           <CheckCircle2 className="h-4 w-4" />
           <span>Paramètres enregistrés avec succès !</span>
+        </div>
+      )}
+      {errorMsg && (
+        <div className="fixed top-20 right-6 z-50 rounded-2xl bg-rose-600 px-5 py-3 text-white shadow-xl animate-fadeIn flex items-center gap-2 text-xs font-bold">
+          <span>{errorMsg}</span>
         </div>
       )}
 
@@ -61,11 +104,12 @@ export default function SettingsPage() {
         <Button
           variant="primary"
           size="sm"
-          onClick={handleSave}
+          onClick={() => handleSave()}
+          disabled={isSaving}
           className="shadow-glow"
           leftIcon={<Save className="h-4 w-4" />}
         >
-          Enregistrer les modifications
+          {isSaving ? "Enregistrement..." : "Enregistrer les modifications"}
         </Button>
       </div>
 

@@ -30,12 +30,74 @@ import { Tabs } from "@/components/ui/tabs";
 import { Modal } from "@/components/ui/modal";
 import { Input } from "@/components/ui/input";
 
+interface EventOverview {
+  id: string;
+  name: string;
+  date: string;
+  time: string;
+  venue: string;
+  slug: string;
+  status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
+}
+
+interface GuestItem {
+  id: string;
+  name: string;
+  phone: string;
+  group: string;
+  isVip: boolean;
+  status: "CONFIRMED" | "PENDING" | "DECLINED";
+  plusOne: number;
+  checkedIn: boolean;
+  time?: string;
+}
+
+interface EventStatsOverview {
+  totalGuests: number;
+  confirmedGuests: number;
+  pendingGuests: number;
+  declinedGuests: number;
+  totalAttendees: number;
+  checkedInCount: number;
+  responseRate: number;
+  checkinRate: number;
+}
+
 export default function DashboardOverviewPage() {
   const [activeGuestTab, setActiveGuestTab] = useState("all");
   const [toastMsg, setToastMsg] = useState("");
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [addGuestModalOpen, setAddGuestModalOpen] = useState(false);
-  const [selectedGuest, setSelectedGuest] = useState<any | null>(null);
+  const [selectedGuest, setSelectedGuest] = useState<GuestItem | null>(null);
+
+  // Dynamic user & events state
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [hasNoEvents, setHasNoEvents] = useState<boolean>(false);
+  const [isPageLoading, setIsPageLoading] = useState<boolean>(true);
+
+  // Active event state
+  const [event, setEvent] = useState<EventOverview>({
+    id: "evt_30ans_ange",
+    name: "Anniversaire d'Ange — 30 Ans",
+    date: "Samedi 26 Septembre 2026",
+    time: "19h30 - 04h00",
+    venue: "Sofitel Hôtel Ivoire, Salle Chandelier, Abidjan",
+    slug: "ange-anniversaire-30",
+    status: "PUBLISHED",
+  });
+
+  // Guests & stats states
+  const [guests, setGuests] = useState<GuestItem[]>([]);
+  const [stats, setStats] = useState<EventStatsOverview>({
+    totalGuests: 0,
+    confirmedGuests: 0,
+    pendingGuests: 0,
+    declinedGuests: 0,
+    totalAttendees: 0,
+    checkedInCount: 0,
+    responseRate: 0,
+    checkinRate: 0,
+  });
 
   // Form fields for adding guest
   const [newName, setNewName] = useState("");
@@ -43,104 +105,150 @@ export default function DashboardOverviewPage() {
   const [newGroup, setNewGroup] = useState("Amis");
   const [newPlusOne, setNewPlusOne] = useState(0);
   const [newIsVip, setNewIsVip] = useState(false);
-
-  // Mock Active Event Data
-  const event = {
-    name: "Anniversaire d'Ange — 30 Ans",
-    date: "Samedi 26 Septembre 2026",
-    time: "19h30 - 04h00",
-    venue: "Sofitel Hôtel Ivoire, Salle Chandelier, Abidjan",
-    slug: "ange-anniversaire-30",
-    status: "PUBLISHED" as const,
-  };
-
-  // Mock Guests List (as State)
-  const [guests, setGuests] = useState([
-    {
-      id: "gst_01",
-      name: "Marc-Antoine Konan",
-      phone: "+225 07 48 19 20 11",
-      group: "Famille proche",
-      isVip: true,
-      status: "CONFIRMED" as const,
-      plusOne: 1,
-      checkedIn: true,
-      time: "Il y a 2h",
-    },
-    {
-      id: "gst_02",
-      name: "Aïcha Traoré",
-      phone: "+225 05 12 34 56 78",
-      group: "Amis d'enfance",
-      isVip: false,
-      status: "CONFIRMED" as const,
-      plusOne: 0,
-      checkedIn: true,
-      time: "Il y a 3h",
-    },
-    {
-      id: "gst_03",
-      name: "Dr. Jean-Yves Touré",
-      phone: "+225 01 98 76 54 32",
-      group: "Collègues",
-      isVip: true,
-      status: "CONFIRMED" as const,
-      plusOne: 1,
-      checkedIn: false,
-      time: "Hier",
-    },
-    {
-      id: "gst_04",
-      name: "Carine Kouamé",
-      phone: "+225 07 65 43 21 00",
-      group: "Amis",
-      isVip: false,
-      status: "PENDING" as const,
-      plusOne: 0,
-      checkedIn: false,
-      time: "Il y a 2 jours",
-    },
-    {
-      id: "gst_05",
-      name: "Éric Bamba",
-      phone: "+225 05 99 88 77 66",
-      group: "Promotion HEC",
-      isVip: false,
-      status: "DECLINED" as const,
-      plusOne: 0,
-      checkedIn: false,
-      time: "Il y a 3 jours",
-    },
-  ]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const showToast = (msg: string) => {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(""), 3500);
   };
 
-  const handleAddGuest = (e: React.FormEvent) => {
+  const loadEventData = React.useCallback(async (evtId: string) => {
+    try {
+      // 1. Fetch stats
+      const statsRes = await fetch(`/api/events/${evtId}/stats`);
+      if (statsRes.ok) {
+        const statsJson = await statsRes.json();
+        if (statsJson.success && statsJson.data) {
+          setStats(statsJson.data);
+        }
+      }
+
+      // 2. Fetch guests
+      const guestsRes = await fetch(`/api/guests?eventId=${evtId}`);
+      if (guestsRes.ok) {
+        const guestsJson = await guestsRes.json();
+        if (guestsJson.success && Array.isArray(guestsJson.data)) {
+          const mapped: GuestItem[] = guestsJson.data.map((g: any) => ({
+            id: g.id,
+            name: `${g.firstName} ${g.lastName}`.trim(),
+            phone: g.phone || "+225 -- -- -- --",
+            group: g.group || "Invités",
+            isVip: Boolean(g.isVip),
+            status: g.rsvpStatus || "PENDING",
+            plusOne: g.plusOneCount || 0,
+            checkedIn: Boolean(g.checkedIn),
+            time: "Récemment",
+          }));
+          setGuests(mapped);
+        }
+      }
+    } catch {
+      // fallback silent
+    }
+  }, []);
+
+  React.useEffect(() => {
+    // 1. Fetch session user
+    fetch("/api/auth/session")
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.success && json.data?.user) {
+          setCurrentUser(json.data.user);
+        }
+      })
+      .catch(() => {});
+
+    // 2. Fetch events
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const urlEvtId = params.get("eventId");
+      const storedEvtId = localStorage.getItem("happy_active_event_id");
+
+      fetch("/api/events")
+        .then((res) => res.json())
+        .then((json) => {
+          if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+            setHasNoEvents(false);
+            const targetId = urlEvtId || storedEvtId || json.data[0].id;
+            const found = json.data.find((e: any) => e.id === targetId) || json.data[0];
+            const eventDate = new Date(found.date);
+            const dateStr = !isNaN(eventDate.getTime())
+              ? eventDate.toLocaleDateString("fr-FR", {
+                  weekday: "long",
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                })
+              : "Date à définir";
+
+            setEvent({
+              id: found.id,
+              name: found.name,
+              date: dateStr,
+              time: `${found.startTime || "19h00"} - ${found.endTime || "Tard"}`,
+              venue: found.venue || found.location || "Lieu à définir",
+              slug: found.slug,
+              status: found.status,
+            });
+            localStorage.setItem("happy_active_event_id", found.id);
+            loadEventData(found.id);
+          } else if (json.success && Array.isArray(json.data) && json.data.length === 0) {
+            setHasNoEvents(true);
+            setGuests([]);
+          }
+        })
+        .catch(() => {
+          setHasNoEvents(true);
+        })
+        .finally(() => {
+          setIsPageLoading(false);
+        });
+    }
+  }, [loadEventData]);
+
+  const handleAddGuest = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newName.trim()) return;
+    if (!newName.trim() || !event.id) return;
+    setIsSubmitting(true);
 
-    const newGuest = {
-      id: "gst_" + Date.now(),
-      name: newName,
-      phone: newPhone || "+225 07 00 00 00",
-      group: newGroup,
-      isVip: newIsVip,
-      status: "PENDING" as const,
-      plusOne: Number(newPlusOne),
-      checkedIn: false,
-      time: "À l'instant",
-    };
+    const parts = newName.trim().split(/\s+/);
+    const firstName = parts[0] || "Invité";
+    const lastName = parts.slice(1).join(" ") || "";
 
-    setGuests((prev) => [newGuest, ...prev]);
-    setNewName("");
-    setNewPhone("");
-    setNewPlusOne(0);
-    setNewIsVip(false);
-    setAddGuestModalOpen(false);
-    showToast(`Invité "${newGuest.name}" ajouté avec succès !`);
+    try {
+      const res = await fetch("/api/guests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          eventId: event.id,
+          firstName,
+          lastName,
+          phone: newPhone.trim() || "+225 07 00 00 00",
+          group: newGroup,
+          plusOneCount: Number(newPlusOne),
+          isVip: newIsVip,
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.error?.message || "Erreur lors de l'ajout");
+      }
+
+      showToast(`Invité "${newName.trim()}" ajouté avec succès !`);
+      setNewName("");
+      setNewPhone("");
+      setNewPlusOne(0);
+      setNewIsVip(false);
+      setAddGuestModalOpen(false);
+
+      // Refresh list
+      loadEventData(event.id);
+    } catch (err: any) {
+      showToast(err.message || "Erreur de connexion");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const [shareUrl, setShareUrl] = useState("https://happyevents.ci/e/ange-anniversaire-30");
@@ -173,8 +281,58 @@ export default function DashboardOverviewPage() {
         </div>
       )}
 
-      {/* 1. TOP EVENT BANNER & QUICK ACTIONS */}
-      <div className="relative overflow-hidden rounded-3xl border border-happy-coral-100 bg-gradient-to-r from-happy-coral-500 via-happy-coral-600 to-amber-600 p-6 sm:p-8 text-white shadow-xl">
+      {/* Dynamic Event or Onboarding View */}
+      {hasNoEvents ? (
+        <div className="rounded-3xl border border-happy-sand-300 bg-white p-6 sm:p-10 text-center shadow-card space-y-6 animate-fadeIn">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-happy-coral-500 to-amber-500 text-white shadow-soft">
+            <Sparkles className="h-8 w-8 fill-white/20" />
+          </div>
+          <div className="max-w-xl mx-auto space-y-2">
+            <h1 className="text-2xl sm:text-3xl font-black text-happy-ink-950 font-display">
+              Bienvenue sur votre espace, {currentUser?.name || "Organisateur"} !
+            </h1>
+            <p className="text-sm text-happy-ink-600 leading-relaxed">
+              Votre tableau de bord personnel est prêt. Créez votre premier événement pour commencer à concevoir vos cartons d&apos;invitation, ajouter vos invités et suivre les confirmations en direct.
+            </p>
+          </div>
+
+          <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Link href="/dashboard/events/new">
+              <Button variant="primary" size="lg" className="shadow-soft font-bold px-8" rightIcon={<Plus className="h-5 w-5" />}>
+                Créer mon premier événement
+              </Button>
+            </Link>
+          </div>
+
+          {/* 3 Step Onboarding Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-6 text-left max-w-4xl mx-auto">
+            <div className="p-5 rounded-2xl bg-happy-sand-50/80 border border-happy-sand-200">
+              <div className="h-8 w-8 rounded-xl bg-happy-coral-100 text-happy-coral-700 flex items-center justify-center font-bold text-sm mb-3">
+                1
+              </div>
+              <h3 className="font-bold text-sm text-happy-ink-900">Configurez votre événement</h3>
+              <p className="text-xs text-happy-ink-500 mt-1">Mariage, Anniversaire, Dot coutumière ou Réception VIP à Abidjan.</p>
+            </div>
+            <div className="p-5 rounded-2xl bg-happy-sand-50/80 border border-happy-sand-200">
+              <div className="h-8 w-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-sm mb-3">
+                2
+              </div>
+              <h3 className="font-bold text-sm text-happy-ink-900">Invitez vos proches</h3>
+              <p className="text-xs text-happy-ink-500 mt-1">Importez vos contacts CSV ou ajoutez vos invités un par un.</p>
+            </div>
+            <div className="p-5 rounded-2xl bg-happy-sand-50/80 border border-happy-sand-200">
+              <div className="h-8 w-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-sm mb-3">
+                3
+              </div>
+              <h3 className="font-bold text-sm text-happy-ink-900">Suivi & Check-in QR Code</h3>
+              <p className="text-xs text-happy-ink-500 mt-1">Recevez les confirmations RSVP et scannez les badges le jour J.</p>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* 1. TOP EVENT BANNER & QUICK ACTIONS */}
+          <div className="relative overflow-hidden rounded-3xl border border-happy-coral-100 bg-gradient-to-r from-happy-coral-500 via-happy-coral-600 to-amber-600 p-6 sm:p-8 text-white shadow-xl">
         <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
           <div className="space-y-2">
             <div className="flex items-center gap-2">
@@ -229,27 +387,27 @@ export default function DashboardOverviewPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <StatCard
           title="Total Invités"
-          value={92}
-          description="Sur 100 prévus"
+          value={stats.totalGuests}
+          description={`Sur ${Math.max(stats.totalGuests, 50)} prévus`}
           icon={<Users className="h-5 w-5" />}
         />
         <StatCard
           title="Confirmés (RSVP)"
-          value={81}
-          description="Taux de réponse 88%"
-          trend={{ value: 12, isPositive: true }}
+          value={stats.confirmedGuests}
+          description={`Taux de réponse ${stats.responseRate}%`}
+          trend={stats.confirmedGuests > 0 ? { value: stats.responseRate, isPositive: true } : undefined}
           icon={<CheckCircle2 className="h-5 w-5 text-emerald-600" />}
         />
         <StatCard
           title="En attente"
-          value={8}
-          description="Relances programmées"
+          value={stats.pendingGuests}
+          description="Relances recommandées"
           icon={<Clock className="h-5 w-5 text-amber-600" />}
         />
         <StatCard
           title="Entrées Check-in"
-          value="47 / 81"
-          description="58% des invités arrivés"
+          value={`${stats.checkedInCount} / ${stats.confirmedGuests || 0}`}
+          description={`${stats.checkinRate}% des confirmés arrivés`}
           icon={<QrCode className="h-5 w-5 text-happy-coral-600" />}
         />
       </div>
@@ -347,8 +505,8 @@ export default function DashboardOverviewPage() {
             </div>
 
             <div className="p-3 border-t border-happy-ink-100 text-center">
-              <Link href="/dashboard/guests" className="text-xs font-bold text-happy-coral-600 hover:underline">
-                Voir tous les 92 invités et exporter la liste →
+              <Link href={`/dashboard/guests?eventId=${event.id}`} className="text-xs font-bold text-happy-coral-600 hover:underline">
+                Voir tous les {guests.length} invités et exporter la liste →
               </Link>
             </div>
           </Card>
@@ -369,7 +527,7 @@ export default function DashboardOverviewPage() {
                       Boissons & Traiteur (IA)
                     </CardTitle>
                     <p className="text-[11px] text-amber-800 font-semibold">
-                      Estimation pour 100 invités
+                      Estimation pour {stats.confirmedGuests || stats.totalGuests || 50} invités
                     </p>
                   </div>
                 </div>
@@ -379,15 +537,21 @@ export default function DashboardOverviewPage() {
             <CardContent className="space-y-3">
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div className="p-2 rounded-xl bg-white border border-amber-200 shadow-2xs">
-                  <p className="text-xs font-black text-amber-950">25 btls</p>
+                  <p className="text-xs font-black text-amber-950">
+                    {Math.ceil((stats.confirmedGuests || stats.totalGuests || 50) / 4)} btls
+                  </p>
                   <p className="text-[10px] text-amber-700 font-medium">Champagne</p>
                 </div>
                 <div className="p-2 rounded-xl bg-white border border-rose-200 shadow-2xs">
-                  <p className="text-xs font-black text-rose-950">34 btls</p>
+                  <p className="text-xs font-black text-rose-950">
+                    {Math.ceil((stats.confirmedGuests || stats.totalGuests || 50) / 3)} btls
+                  </p>
                   <p className="text-[10px] text-rose-700 font-medium">Vins fins</p>
                 </div>
                 <div className="p-2 rounded-xl bg-white border border-emerald-200 shadow-2xs">
-                  <p className="text-xs font-black text-emerald-950">800 pcs</p>
+                  <p className="text-xs font-black text-emerald-950">
+                    {(stats.confirmedGuests || stats.totalGuests || 50) * 8} pcs
+                  </p>
                   <p className="text-[10px] text-emerald-700 font-medium">Canapés</p>
                 </div>
               </div>
@@ -455,7 +619,7 @@ export default function DashboardOverviewPage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base">Checklist & Tâches</CardTitle>
-                <Link href="/dashboard/ai" className="text-xs font-bold text-happy-coral-600 hover:underline">
+                <Link href="/dashboard/ai?tab=checklist" className="text-xs font-bold text-happy-coral-600 hover:underline">
                   Voir tout →
                 </Link>
               </div>
@@ -481,12 +645,14 @@ export default function DashboardOverviewPage() {
               </div>
               <div className="flex items-center gap-2.5 text-happy-ink-800">
                 <div className="h-4 w-4 rounded-full border-2 border-happy-ink-300 shrink-0" />
-                <span>Rappel aux 8 invités sans réponse</span>
+                <span>Rappel aux invités sans réponse ({stats.pendingGuests})</span>
               </div>
             </CardContent>
           </Card>
         </div>
       </div>
+      </>
+      )}
 
       {/* Share WhatsApp Modal */}
       {shareModalOpen && (
@@ -498,7 +664,7 @@ export default function DashboardOverviewPage() {
         >
           <div className="space-y-4 pt-2 text-xs">
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-4 leading-relaxed text-happy-ink-800">
-              « Bonjour ! Tu es cordialement invité(e) aux 30 ans d&apos;Ange le 26 Septembre au Sofitel Hôtel Ivoire. Valide ta présence et obtiens ton QR Code d&apos;entrée ici : {shareUrl} »
+              « Bonjour ! Tu es cordialement invité(e) à {event.name} ({event.date} à {event.venue}). Valide ta présence et obtiens ton pass d&apos;entrée avec QR Code ici : {shareUrl} »
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 pt-2">
@@ -512,7 +678,7 @@ export default function DashboardOverviewPage() {
               </Button>
               <a
                 href={`https://wa.me/?text=${encodeURIComponent(
-                  `Tu es invité aux 30 ans d'Ange le 26 Septembre au Sofitel Ivoire ! Valide ton invitation ici : ${shareUrl}`
+                  `Tu es invité(e) à ${event.name} (${event.date} à ${event.venue}) ! Valide ton invitation ici : ${shareUrl}`
                 )}`}
                 target="_blank"
                 rel="noreferrer"
@@ -601,8 +767,8 @@ export default function DashboardOverviewPage() {
               >
                 Annuler
               </Button>
-              <Button type="submit" variant="primary">
-                Enregistrer
+              <Button type="submit" variant="primary" disabled={isSubmitting}>
+                {isSubmitting ? "Enregistrement..." : "Enregistrer"}
               </Button>
             </div>
           </form>

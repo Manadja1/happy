@@ -23,13 +23,20 @@ import { StatCard } from "@/components/ui/stat-card";
 
 export default function RsvpAnalyticsPage() {
   const [reminderSent, setReminderSent] = useState(false);
+  const [activeEventId, setActiveEventId] = useState("evt_30ans_ange");
+  const [activeSlug, setActiveSlug] = useState("ange-anniversaire-30");
+  const [stats, setStats] = useState({
+    totalGuests: 92,
+    confirmedGuests: 81,
+    pendingGuests: 8,
+    declinedGuests: 3,
+    totalAttendees: 95,
+    checkedInCount: 47,
+    responseRate: 88,
+    checkinRate: 58,
+  });
 
-  const handleSendReminder = () => {
-    setReminderSent(true);
-    setTimeout(() => setReminderSent(false), 4000);
-  };
-
-  const recentResponses = [
+  const [responses, setResponses] = useState<any[]>([
     {
       id: "resp_1",
       name: "Marc-Antoine Konan",
@@ -45,7 +52,7 @@ export default function RsvpAnalyticsPage() {
       status: "CONFIRMED" as const,
       plusOne: 0,
       time: "Il y a 1 heure",
-      dietary: "Aucun",
+      dietary: "Standard",
       message: "Joyeux anniversaire d'avance mon frère !",
     },
     {
@@ -57,16 +64,69 @@ export default function RsvpAnalyticsPage() {
       dietary: "-",
       message: "En mission à Dakar, de tout cœur avec vous.",
     },
-    {
-      id: "resp_4",
-      name: "Clarisse N'Guessan",
-      status: "CONFIRMED" as const,
-      plusOne: 1,
-      time: "Hier",
-      dietary: "Standard",
-      message: "Hâte de danser !",
-    },
-  ];
+  ]);
+
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const evtId = params.get("eventId") || localStorage.getItem("happy_active_event_id") || "evt_30ans_ange";
+      setActiveEventId(evtId);
+
+      // Load real stats
+      fetch(`/api/events/${evtId}/stats`)
+        .then((r) => r.json())
+        .then((json) => {
+          if (json.success && json.data) {
+            setStats(json.data);
+          }
+        })
+        .catch(() => {});
+
+      // Load guests for responses
+      fetch(`/api/guests?eventId=${evtId}`)
+        .then((r) => r.json())
+        .then((json) => {
+          if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+            const answered = json.data
+              .filter((g: any) => g.rsvpStatus === "CONFIRMED" || g.rsvpStatus === "DECLINED")
+              .map((g: any) => ({
+                id: g.id,
+                name: `${g.firstName} ${g.lastName}`.trim(),
+                status: g.rsvpStatus,
+                plusOne: g.plusOneCount || 0,
+                time: "Récemment",
+                dietary: g.dietaryPreference || "Standard",
+                message: g.rsvpStatus === "CONFIRMED" ? "Présence confirmée" : "Ne peut pas venir",
+              }));
+            if (answered.length > 0) {
+              setResponses(answered);
+            }
+          }
+        })
+        .catch(() => {});
+
+      // Fetch event slug
+      fetch(`/api/events/${evtId}`)
+        .then((r) => r.json())
+        .then((json) => {
+          if (json.success && json.data?.slug) {
+            setActiveSlug(json.data.slug);
+          }
+        })
+        .catch(() => {});
+    }
+  }, []);
+
+  const handleSendReminder = () => {
+    setReminderSent(true);
+    const origin = typeof window !== "undefined" ? window.location.origin : "https://happyevents.ci";
+    const link = `${origin}/e/${activeSlug}`;
+    const msg = `Bonjour ! Petit rappel amical : merci de confirmer votre présence sur votre carton d'invitation : ${link}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
+    setTimeout(() => setReminderSent(false), 4000);
+  };
+
+  const recentResponses = responses;
 
   return (
     <div className="space-y-8 animate-fadeIn pb-16">
@@ -74,7 +134,7 @@ export default function RsvpAnalyticsPage() {
       {reminderSent && (
         <div className="fixed top-20 right-6 z-50 rounded-2xl bg-emerald-600 px-5 py-3 text-white shadow-xl animate-fadeIn flex items-center gap-2 text-xs font-bold">
           <CheckCircle2 className="h-4 w-4" />
-          <span>Relance WhatsApp envoyée avec succès aux 8 invités en attente !</span>
+          <span>Relance WhatsApp ouverte pour les {stats.pendingGuests} invité(s) en attente !</span>
         </div>
       )}
 
@@ -86,7 +146,7 @@ export default function RsvpAnalyticsPage() {
             <span>Suivi Analytique des RSVP</span>
           </h1>
           <p className="text-xs sm:text-sm text-happy-ink-600 mt-1">
-            Visualisez les réponses en direct, les régimes alimentaires et l'état des relances WhatsApp.
+            Visualisez les réponses en direct, les régimes alimentaires et l&apos;état des relances WhatsApp.
           </p>
         </div>
 
@@ -97,7 +157,7 @@ export default function RsvpAnalyticsPage() {
           className="shadow-soft"
           leftIcon={<MessageCircle className="h-4 w-4" />}
         >
-          Relancer les 8 sans réponse
+          Relancer les {stats.pendingGuests} sans réponse
         </Button>
       </div>
 
@@ -105,26 +165,26 @@ export default function RsvpAnalyticsPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <StatCard
           title="Taux de confirmation"
-          value="88%"
-          description="81 / 92 invités"
+          value={`${stats.responseRate}%`}
+          description={`${stats.confirmedGuests} / ${stats.totalGuests} invités`}
           trend={{ value: 14, isPositive: true }}
           icon={<TrendingUp className="h-5 w-5 text-emerald-600" />}
         />
         <StatCard
           title="Confirmés"
-          value="81"
-          description="+14 accompagnants (+1)"
+          value={stats.confirmedGuests}
+          description={`${stats.totalAttendees} personnes attendues`}
           icon={<CheckCircle2 className="h-5 w-5 text-emerald-600" />}
         />
         <StatCard
           title="En attente"
-          value="8"
+          value={stats.pendingGuests}
           description="Relances actives"
           icon={<Clock className="h-5 w-5 text-amber-600" />}
         />
         <StatCard
           title="Déclinés"
-          value="3"
+          value={stats.declinedGuests}
           description="Motif renseigné"
           icon={<XCircle className="h-5 w-5 text-rose-500" />}
         />

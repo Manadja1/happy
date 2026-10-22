@@ -1,6 +1,7 @@
 import { store } from "@/lib/db/store";
 import { assertEventAccess } from "@/lib/auth/session";
 import { Event, EventStatus, EventType, EventStats } from "@/types";
+import { syncEventToPostgres, deleteEventFromPostgres } from "@/lib/db/sync";
 
 export interface CreateEventInput {
   name: string;
@@ -77,7 +78,7 @@ export async function createNewEvent(
   const existingWithSlug = store.getEventBySlug(slug);
   const finalSlug = existingWithSlug ? generateSlug(input.name) : slug;
 
-  return store.createEvent({
+  const newEvt = store.createEvent({
     ownerId: userId,
     name: input.name,
     type: input.type || "OTHER",
@@ -95,6 +96,8 @@ export async function createNewEvent(
     slug: finalSlug,
     status: input.status || "DRAFT",
   });
+  await syncEventToPostgres(newEvt);
+  return newEvt;
 }
 
 export async function updateExistingEvent(
@@ -127,6 +130,7 @@ export async function updateExistingEvent(
     throw new Error("UPDATE_FAILED: Échec de mise à jour de l'événement");
   }
 
+  await syncEventToPostgres(updated);
   return updated;
 }
 
@@ -141,7 +145,11 @@ export async function deleteExistingEvent(
     throw new Error("NOT_FOUND: Événement introuvable ou vous n'en êtes pas le propriétaire");
   }
 
-  return store.deleteEvent(eventId);
+  const ok = store.deleteEvent(eventId);
+  if (ok) {
+    await deleteEventFromPostgres(eventId);
+  }
+  return ok;
 }
 
 export async function getEventStatsForUser(

@@ -6,6 +6,8 @@ import {
   QrCode,
   Scan,
   Camera,
+  CameraOff,
+  SwitchCamera,
   CheckCircle2,
   AlertTriangle,
   Users,
@@ -34,6 +36,18 @@ export default function CheckinPage() {
   const [simulatedScan, setSimulatedScan] = useState<ScanRecord | null>(null);
   const [duplicateWarning, setDuplicateWarning] = useState<any | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [isCameraActive, setIsCameraActive] = useState(false);
+  const [cameraError, setCameraError] = useState("");
+  const [facingMode, setFacingMode] = useState<"environment" | "user">("environment");
+  const videoRef = React.useRef<HTMLVideoElement | null>(null);
+  const streamRef = React.useRef<MediaStream | null>(null);
+
+  const [stats, setStats] = useState({
+    confirmedGuests: 81,
+    checkedInCount: 47,
+    checkinRate: 58,
+  });
+
   const [scansList, setScansList] = useState<ScanRecord[]>([
     {
       id: "scan_1",
@@ -55,7 +69,23 @@ export default function CheckinPage() {
     },
   ]);
 
-  const handleValidateToken = async (tokenToTest?: string) => {
+  const loadStats = React.useCallback(async (evtId: string) => {
+    try {
+      const res = await fetch(`/api/events/${evtId}/stats`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data) {
+          setStats({
+            confirmedGuests: json.data.confirmedGuests || 0,
+            checkedInCount: json.data.checkedInCount || 0,
+            checkinRate: json.data.checkinRate || 0,
+          });
+        }
+      }
+    } catch {}
+  }, []);
+
+  const handleValidateToken = React.useCallback(async (tokenToTest?: string) => {
     const targetToken = tokenToTest || tokenInput.trim();
     if (!targetToken) return;
     setIsVerifying(true);
@@ -86,6 +116,10 @@ export default function CheckinPage() {
         setSimulatedScan(newRecord);
         setScansList((prev) => [newRecord, ...prev]);
         setTokenInput("");
+
+        // Refresh stats
+        const evtId = localStorage.getItem("happy_active_event_id") || "evt_30ans_ange";
+        loadStats(evtId);
       } else {
         const isDuplicate = json.error?.code === "ALREADY_CHECKED_IN" || json.error?.message?.includes("ALREADY");
         if (isDuplicate) {
@@ -110,7 +144,70 @@ export default function CheckinPage() {
     } finally {
       setIsVerifying(false);
     }
+  }, [tokenInput, loadStats]);
+
+  // Check URL token on mount and load stats
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const urlToken = params.get("token");
+      if (urlToken) {
+        setTokenInput(urlToken);
+        handleValidateToken(urlToken);
+      }
+      const evtId = params.get("eventId") || localStorage.getItem("happy_active_event_id") || "evt_30ans_ange";
+      loadStats(evtId);
+    }
+  }, [handleValidateToken, loadStats]);
+
+  // Camera stream controls
+  const startCamera = async (facing: "environment" | "user" = facingMode) => {
+    setCameraError("");
+    try {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: facing },
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play().catch(() => {});
+      }
+      setIsCameraActive(true);
+    } catch (err: any) {
+      setCameraError("Impossible d'accéder à la caméra : " + (err.message || "Permission refusée"));
+      setIsCameraActive(false);
+    }
   };
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    setIsCameraActive(false);
+  };
+
+  const toggleFacingMode = () => {
+    const nextFacing = facingMode === "environment" ? "user" : "environment";
+    setFacingMode(nextFacing);
+    if (isCameraActive) {
+      startCamera(nextFacing);
+    }
+  };
+
+  React.useEffect(() => {
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
+      }
+    };
+  }, []);
 
   const handleSimulateScan = () => {
     handleValidateToken("tok_ange_toure_03");
@@ -154,17 +251,20 @@ export default function CheckinPage() {
           </span>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-3xl font-black text-happy-ink-900 font-display">
-              76
+              {stats.checkedInCount}
             </span>
             <span className="text-xs text-happy-ink-400 font-semibold">
-              / 92 confirmés
+              / {stats.confirmedGuests} confirmés
             </span>
           </div>
           <div className="mt-3 h-2 w-full rounded-full bg-happy-sand-200 overflow-hidden">
-            <div className="h-full bg-emerald-500 rounded-full w-[82%]" />
+            <div
+              className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+              style={{ width: `${Math.min(stats.checkinRate, 100)}%` }}
+            />
           </div>
           <span className="text-[11px] text-emerald-700 font-bold mt-2 block">
-            82.6% de présence enregistrée
+            {stats.checkinRate}% de présence enregistrée
           </span>
         </div>
 
@@ -189,9 +289,9 @@ export default function CheckinPage() {
           </span>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-3xl font-black text-rose-600 font-display">
-              1
+              {scansList.filter((s) => s.status === "DUPLICATE").length}
             </span>
-            <span className="text-xs text-rose-500 font-semibold">bloquée</span>
+            <span className="text-xs text-rose-500 font-semibold">bloquée(s)</span>
           </div>
           <p className="text-[11px] text-happy-ink-500 mt-3">
             Anti-fraude actif : le billet déjà utilisé a été rejeté
@@ -274,20 +374,45 @@ export default function CheckinPage() {
 
       {/* Scan Camera Area & Search */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Camera Viewport Simulation */}
+        {/* Camera Viewport */}
         <div className="lg:col-span-5 rounded-3xl border border-happy-ink-200 bg-white p-6 shadow-soft space-y-4">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-happy-ink-700 flex items-center gap-2">
               <Camera className="h-4 w-4 text-happy-coral-500" />
-              Caméra du smartphone
+              Caméra de contrôle
             </span>
-            <span className="text-[11px] font-bold text-emerald-600">● En ligne</span>
+            <div className="flex items-center gap-2">
+              {isCameraActive && (
+                <button
+                  type="button"
+                  onClick={toggleFacingMode}
+                  className="rounded-lg border border-happy-ink-200 bg-white p-1 text-happy-ink-600 hover:bg-happy-sand-100"
+                  title="Changer de caméra (avant/arrière)"
+                >
+                  <SwitchCamera className="h-3.5 w-3.5" />
+                </button>
+              )}
+              <span className="text-[11px] font-bold text-emerald-600">
+                {isCameraActive ? "● Flux actif" : "○ En attente"}
+              </span>
+            </div>
           </div>
 
           {/* Camera Frame */}
           <div className="relative h-64 w-full rounded-2xl bg-happy-ink-950 flex flex-col items-center justify-center overflow-hidden border border-happy-ink-800">
-            {/* Viewfinder brackets */}
-            <div className="relative h-44 w-44 rounded-2xl border-2 border-dashed border-emerald-400/80 flex items-center justify-center">
+            {/* Live Video element */}
+            <video
+              ref={videoRef}
+              playsInline
+              autoPlay
+              muted
+              className={`absolute inset-0 h-full w-full object-cover ${
+                isCameraActive ? "opacity-100" : "opacity-0 pointer-events-none"
+              }`}
+            />
+
+            {/* Viewfinder brackets overlay */}
+            <div className="relative z-10 h-44 w-44 rounded-2xl border-2 border-dashed border-emerald-400/80 flex items-center justify-center pointer-events-none">
               <div className="absolute top-0 left-0 h-4 w-4 border-t-2 border-l-2 border-emerald-400" />
               <div className="absolute top-0 right-0 h-4 w-4 border-t-2 border-r-2 border-emerald-400" />
               <div className="absolute bottom-0 left-0 h-4 w-4 border-b-2 border-l-2 border-emerald-400" />
@@ -297,9 +422,42 @@ export default function CheckinPage() {
               <div className="h-0.5 w-full bg-emerald-400 shadow-[0_0_8px_#34d399] animate-pulse" />
             </div>
 
-            <p className="text-[11px] text-white/75 mt-4">
-              Pointez l'appareil photo vers le QR code invité
+            <p className="relative z-10 text-[11px] text-white/90 bg-black/50 backdrop-blur-xs px-2.5 py-0.5 rounded-full mt-3 pointer-events-none">
+              {isCameraActive
+                ? "Pointez vers le QR code invité"
+                : "Activez la caméra pour scanner"}
             </p>
+          </div>
+
+          {cameraError && (
+            <p className="text-xs text-rose-600 bg-rose-50 border border-rose-200 p-2 rounded-xl font-medium">
+              {cameraError}
+            </p>
+          )}
+
+          {/* Camera On/Off Toggle Button */}
+          <div>
+            {!isCameraActive ? (
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => startCamera()}
+                className="w-full text-xs shadow-soft"
+                leftIcon={<Camera className="h-4 w-4" />}
+              >
+                Activer la caméra pour scanner
+              </Button>
+            ) : (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={stopCamera}
+                className="w-full text-xs"
+                leftIcon={<CameraOff className="h-4 w-4" />}
+              >
+                Désactiver la caméra
+              </Button>
+            )}
           </div>
 
           {/* Manual Token Verification Tool */}

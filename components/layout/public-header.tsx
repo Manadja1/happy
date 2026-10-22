@@ -11,65 +11,84 @@ export function PublicHeader() {
   return (
     <header className="sticky top-0 z-40 w-full border-b border-happy-ink-100/80 bg-white/80 backdrop-blur-md transition-all">
       <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        {/* Brand Logo */}
-        <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-happy-coral-500 to-amber-500 text-white shadow-soft group-hover:scale-105 transition-transform duration-200">
-            <Sparkles className="h-5 w-5 fill-white/20" />
-          </div>
-          <div className="flex flex-col">
-            <span className="text-xl font-black tracking-tight text-happy-ink-900 font-display">
-              HAPPY<span className="text-happy-coral-500">EVENTS</span>
-            </span>
-            <span className="text-[10px] font-bold uppercase tracking-widest text-amber-600 -mt-1">
-              Zéro stress
-            </span>
-          </div>
-        </Link>
+        {/* Brand Logo & Navigation Group with Protected Spacing */}
+        <div className="flex items-center gap-6 xl:gap-12 shrink-0">
+          <Link href="/" className="flex items-center gap-2.5 group shrink-0">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-happy-coral-500 to-amber-500 text-white shadow-soft group-hover:scale-105 transition-transform duration-200">
+              <Sparkles className="h-5 w-5 fill-white/20" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xl font-black tracking-tight text-happy-ink-900 font-display whitespace-nowrap">
+                HAPPY<span className="text-happy-coral-500">EVENTS</span>
+              </span>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-amber-600 -mt-1 whitespace-nowrap">
+                Zéro stress
+              </span>
+            </div>
+          </Link>
 
-        {/* Desktop Navigation Links */}
-        <nav className="hidden md:flex items-center gap-8 text-sm font-semibold text-happy-ink-700">
-          <Link
-            href="/#features"
-            className="hover:text-happy-coral-600 transition-colors"
-          >
-            Fonctionnalités
-          </Link>
-          <Link
-            href="/#how-it-works"
-            className="hover:text-happy-coral-600 transition-colors"
-          >
-            Comment ça marche
-          </Link>
-          <Link
-            href="/templates"
-            className="hover:text-happy-coral-600 transition-colors"
-          >
-            Modèles d'invitations
-          </Link>
-          <Link
-            href="/pricing"
-            className="hover:text-happy-coral-600 transition-colors"
-          >
-            Tarifs
-          </Link>
-        </nav>
+          {/* Desktop Navigation Links — Strictly single-line with whitespace-nowrap */}
+          <nav className="hidden lg:flex items-center gap-1 xl:gap-2 text-[13px] xl:text-sm font-semibold text-happy-ink-700 shrink-0">
+            <Link
+              href="/#features"
+              className="px-3 py-1.5 rounded-xl whitespace-nowrap text-happy-ink-800 hover:text-happy-coral-600 hover:bg-happy-sand-100/80 transition-all duration-150"
+            >
+              Fonctionnalités
+            </Link>
+            <Link
+              href="/#how-it-works"
+              className="px-3 py-1.5 rounded-xl whitespace-nowrap text-happy-ink-800 hover:text-happy-coral-600 hover:bg-happy-sand-100/80 transition-all duration-150"
+            >
+              Comment ça marche
+            </Link>
+            <Link
+              href="/templates"
+              className="px-3 py-1.5 rounded-xl whitespace-nowrap text-happy-ink-800 hover:text-happy-coral-600 hover:bg-happy-sand-100/80 transition-all duration-150"
+            >
+              Modèles d'invitations
+            </Link>
+            <Link
+              href="/pricing"
+              className="px-3 py-1.5 rounded-xl whitespace-nowrap text-happy-ink-800 hover:text-happy-coral-600 hover:bg-happy-sand-100/80 transition-all duration-150"
+            >
+              Tarifs
+            </Link>
+          </nav>
+        </div>
 
-        {/* Desktop CTA & Regional Badge */}
-        <div className="hidden md:flex items-center gap-4">
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-happy-sand-100 text-xs font-semibold text-happy-ink-600 border border-happy-sand-200">
+        {/* Desktop CTA & Regional Badge — Balanced for all screen widths */}
+        <div className="hidden md:flex items-center gap-2 xl:gap-3 shrink-0">
+          <div className="hidden 2xl:flex items-center gap-1.5 px-3 py-1 rounded-full bg-happy-sand-100 text-xs font-semibold text-happy-ink-600 border border-happy-sand-200 whitespace-nowrap">
             <Globe className="h-3.5 w-3.5 text-happy-coral-500" />
             <span>Abidjan 🇨🇮</span>
           </div>
-          <Link href="/login">
-            <Button variant="ghost" size="sm">
+
+          <Link href="/login" className="shrink-0">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-happy-ink-700 hover:text-happy-coral-600 font-semibold whitespace-nowrap"
+            >
               Connexion
             </Button>
           </Link>
-          <Link href="/dashboard/events/new">
+
+          <Link href="/register" className="hidden xl:inline-block shrink-0">
+            <Button
+              variant="secondary"
+              size="sm"
+              className="font-bold border border-happy-sand-300 bg-white hover:bg-happy-sand-50 text-happy-ink-900 shadow-2xs whitespace-nowrap"
+            >
+              Inscription
+            </Button>
+          </Link>
+
+          <Link href="/dashboard/events/new" className="shrink-0">
             <Button
               variant="primary"
               size="sm"
               rightIcon={<ArrowRight className="h-4 w-4" />}
+              className="shadow-soft whitespace-nowrap"
             >
               Créer mon événement
             </Button>
@@ -134,16 +153,23 @@ export function PublicHeader() {
               Tarifs
             </Link>
             <div className="pt-4 flex flex-col gap-3">
-              <Link href="/login" onClick={() => setMobileMenuOpen(false)}>
-                <Button variant="secondary" className="w-full">
-                  Connexion
-                </Button>
-              </Link>
+              <div className="grid grid-cols-2 gap-2">
+                <Link href="/login" onClick={() => setMobileMenuOpen(false)}>
+                  <Button variant="secondary" className="w-full text-xs font-bold">
+                    Connexion
+                  </Button>
+                </Link>
+                <Link href="/register" onClick={() => setMobileMenuOpen(false)}>
+                  <Button variant="outline" className="w-full text-xs font-bold border-happy-sand-300 bg-white">
+                    Inscription
+                  </Button>
+                </Link>
+              </div>
               <Link
                 href="/dashboard/events/new"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                <Button variant="primary" className="w-full">
+                <Button variant="primary" className="w-full shadow-soft">
                   Créer mon événement
                 </Button>
               </Link>

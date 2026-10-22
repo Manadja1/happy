@@ -44,6 +44,7 @@ export interface User {
   phone?: string | null;
   avatar?: string | null;
   role: UserRole;
+  passwordHash?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

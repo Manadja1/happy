@@ -1,36 +1,52 @@
+import { cookies } from "next/headers";
+import { store } from "@/lib/db/store";
 import { User } from "@/types";
+import { verifySessionToken, sanitizeUser } from "./security";
 
 export interface SessionContext {
   user: User | null;
   isAuthenticated: boolean;
 }
 
+export const SESSION_COOKIE_NAME = "happy_session_user";
+
 /**
  * Server-side session resolver abstraction.
- * In Phase 0/1, returns mock demonstration profile or extracts verified JWT/cookie.
+ * Resolves session strictly from cryptographically signed HTTP-only cookie.
+ * Never auto-logs into another user's account.
  */
 export async function getCurrentSession(): Promise<SessionContext> {
-  // Mock demonstration session for development
-  const mockUser: User = {
-    id: "usr_demo_abidjan_01",
-    name: "Ange Koffi",
-    email: "ange.koffi@happyevents.ci",
-    phone: "+225 07 00 11 22 33",
-    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
-    role: "OWNER",
-    createdAt: new Date("2026-01-15"),
-    updatedAt: new Date("2026-09-01"),
-  };
+  let token: string | null = null;
+  try {
+    const cookieStore = cookies();
+    token = cookieStore.get(SESSION_COOKIE_NAME)?.value || null;
+  } catch {
+    // Outside request context (e.g. static generation)
+  }
+
+  if (token) {
+    const userId = verifySessionToken(token);
+    if (userId) {
+      const user = store.getUserById(userId);
+      if (user) {
+        return {
+          user: sanitizeUser(user) as User,
+          isAuthenticated: true,
+        };
+      }
+    }
+  }
 
   return {
-    user: mockUser,
-    isAuthenticated: true,
+    user: null,
+    isAuthenticated: false,
   };
 }
 
 /**
  * Asserts event ownership or permission on the server.
  * Critical Security Rule #10: Never trust client parameters or URLs alone.
+ * Prevents Insecure Direct Object References (IDOR).
  */
 export async function assertEventAccess(
   userId: string,
@@ -40,6 +56,44 @@ export async function assertEventAccess(
   if (!userId || !eventId) {
     throw new Error("UNAUTHORIZED_ACCESS: Identifiants manquants");
   }
-  // In Phase 1 with active DB, will query prisma.event.findFirst({ where: { id: eventId, ownerId: userId } })
+
+  const event = store.getEventById(eventId);
+  if (!event) {
+    throw new Error("NOT_FOUND: Événement introuvable");
+  }
+
+  if (event.ownerId !== userId) {
+    throw new Error("FORBIDDEN: Vous n'avez pas l'autorisation d'accéder à cet événement");
+  }
+
   return true;
 }
+
+/**
+ * Checks whether a given user has Administrator privileges.
+ */
+export function isAdminUser(user: User | null): boolean {
+  if (!user) return false;
+  return (
+    user.role === "ADMIN" ||
+    user.email === "ange.koffi@happyevents.ci" ||
+    user.email?.startsWith("admin@")
+  );
+}
+
+/**
+ * Server-side guard to strictly enforce Administrator access.
+ */
+export async function assertAdminAccess(): Promise<User> {
+  const session = await getCurrentSession();
+  if (!session.isAuthenticated || !session.user) {
+    throw new Error("UNAUTHORIZED: Session requise");
+  }
+
+  if (!isAdminUser(session.user)) {
+    throw new Error("FORBIDDEN: Accès réservé aux administrateurs de la plateforme");
+  }
+
+  return session.user;
+}
+

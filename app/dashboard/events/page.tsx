@@ -96,10 +96,73 @@ const INITIAL_EVENTS: EventItem[] = [
 ];
 
 export default function EventsListPage() {
+  const [events, setEvents] = useState<EventItem[]>(INITIAL_EVENTS);
   const [filter, setFilter] = useState<"ALL" | "ACTIVE" | "UPCOMING" | "PAST">("ALL");
   const [search, setSearch] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
 
-  const filteredEvents = INITIAL_EVENTS.filter((evt) => {
+  React.useEffect(() => {
+    fetch("/api/events")
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+          const apiEvents: EventItem[] = json.data.map((e: any) => {
+            const formattedDate = e.date
+              ? new Date(e.date).toLocaleDateString("fr-FR", {
+                  weekday: "long",
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                })
+              : "Date à venir";
+
+            const typeLabel =
+              e.type === "WEDDING"
+                ? "Mariage Royal"
+                : e.type === "BIRTHDAY"
+                ? "Anniversaire VIP"
+                : e.type === "DOT"
+                ? "Dot Coutumière"
+                : e.type === "CORPORATE"
+                ? "Gala d'Entreprise"
+                : "Célébration";
+
+            const defaultImg =
+              e.type === "WEDDING"
+                ? "/images/hero-wedding.jpg"
+                : e.type === "DOT"
+                ? "/images/hero-tradition.jpg"
+                : e.type === "CORPORATE"
+                ? "/images/hero-gala.jpg"
+                : "/images/hero-birthday.jpg";
+
+            return {
+              id: e.id,
+              name: e.name,
+              type: typeLabel,
+              date: formattedDate,
+              time: e.startTime ? `${e.startTime} - ${e.endTime || "Tard"}` : "19h30 - 04h00",
+              venue: e.venue || "Abidjan, Côte d'Ivoire",
+              slug: e.slug,
+              image: e.coverImage || defaultImg,
+              status: e.status === "PUBLISHED" ? "ACTIVE" : e.status === "DRAFT" ? "DRAFT" : "UPCOMING",
+              guestsCount: e.stats?.totalGuests ?? 0,
+              confirmedCount: e.stats?.confirmedGuests ?? 0,
+              checkinCount: e.stats?.checkedInCount ?? 0,
+            };
+          });
+
+          // Merge with INITIAL_EVENTS for sample presentation if user has few events
+          const existingIds = new Set(apiEvents.map((a) => a.slug));
+          const complementary = INITIAL_EVENTS.filter((init) => !existingIds.has(init.slug));
+          setEvents([...apiEvents, ...complementary]);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  const filteredEvents = events.filter((evt) => {
     const matchesFilter =
       filter === "ALL"
         ? true

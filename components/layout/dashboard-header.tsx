@@ -52,23 +52,77 @@ export function DashboardHeader() {
     setNotificationsOpen(false);
   }, [pathname]);
 
-  // Mock current active event
-  const currentEvent = {
-    id: "evt_ange_01",
-    name: "Anniversaire d'Ange — 30 Ans",
-    date: "26 Septembre 2026",
+  // Dynamic session & events state
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [eventsList, setEventsList] = useState<any[]>([]);
+  const [activeEventId, setActiveEventId] = useState<string>("");
+
+  useEffect(() => {
+    // Fetch active user session
+    fetch("/api/auth/session")
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.success && json.data?.user) {
+          setCurrentUser(json.data.user);
+        } else {
+          // Unauthenticated -> redirect to login
+          window.location.href = "/login";
+        }
+      })
+      .catch(() => {});
+
+    // Fetch user events
+    fetch("/api/events")
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.success && Array.isArray(json.data)) {
+          const mapped = json.data.map((e: any) => ({
+            id: e.id,
+            name: e.name,
+            date: e.date
+              ? new Date(e.date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
+              : "Date à venir",
+            slug: e.slug,
+            venue: e.venue || "Abidjan",
+          }));
+          setEventsList(mapped);
+
+          if (mapped.length > 0) {
+            const stored = typeof window !== "undefined" ? localStorage.getItem("happy_active_event_id") : null;
+            const initial = stored && mapped.some((m: any) => m.id === stored) ? stored : mapped[0].id;
+            setActiveEventId(initial);
+          } else {
+            setActiveEventId("");
+          }
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const currentEvent = eventsList.find((e) => e.id === activeEventId) || eventsList[0] || {
+    id: "evt_30ans_ange",
+    name: "Mon Événement",
+    date: "Date à venir",
     slug: "ange-anniversaire-30",
-    venue: "Sofitel Hôtel Ivoire, Abidjan",
   };
 
-  const otherEvents = [
-    {
-      id: "evt_mariage_02",
-      name: "Mariage Traditionnel & Dot (Koffi & Awa)",
-      date: "14 Novembre 2026",
-      slug: "mariage-koffi-awa",
-    },
-  ];
+  const otherEvents = eventsList.filter((e) => e.id !== currentEvent.id);
+
+  const handleSelectEvent = (id: string) => {
+    setActiveEventId(id);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("happy_active_event_id", id);
+      window.dispatchEvent(new CustomEvent("active-event-changed", { detail: { eventId: id } }));
+    }
+    setEventSwitcherOpen(false);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch {}
+    window.location.href = "/login";
+  };
 
   // Full Navigation List (Parity with desktop sidebar)
   const navItems = [
@@ -175,7 +229,7 @@ export function DashboardHeader() {
                   {otherEvents.map((evt) => (
                     <button
                       key={evt.id}
-                      onClick={() => setEventSwitcherOpen(false)}
+                      onClick={() => handleSelectEvent(evt.id)}
                       className="w-full text-left rounded-xl p-2.5 hover:bg-happy-sand-100 transition-colors"
                     >
                       <p className="text-xs font-semibold text-happy-ink-800 truncate">
@@ -294,18 +348,18 @@ export function DashboardHeader() {
             >
               <div className="relative">
                 <Avatar
-                  name="Ange Koffi"
+                  name={currentUser?.name || "Organisateur"}
                   size="sm"
-                  src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80"
+                  src={currentUser?.avatar || undefined}
                 />
                 <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-white" />
               </div>
               <div className="hidden md:flex flex-col text-left">
                 <span className="text-xs font-bold text-happy-ink-900 leading-tight">
-                  Ange Koffi
+                  {currentUser?.name || "Mon Espace"}
                 </span>
                 <span className="text-[10px] text-happy-ink-500 font-medium leading-tight">
-                  Organisateur
+                  {currentUser?.role === "ADMIN" ? "Administrateur" : "Organisateur"}
                 </span>
               </div>
               <ChevronDown className="h-3.5 w-3.5 text-happy-ink-400 hidden sm:block" />
@@ -323,25 +377,27 @@ export function DashboardHeader() {
                   <div className="p-3 rounded-xl bg-gradient-to-br from-happy-sand-100 to-amber-50/50 border border-happy-sand-200">
                     <div className="flex items-center gap-3">
                       <Avatar
-                        name="Ange Koffi"
+                        name={currentUser?.name || "Organisateur"}
                         size="md"
-                        src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80"
+                        src={currentUser?.avatar || undefined}
                       />
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5">
                           <p className="text-sm font-bold text-happy-ink-900 truncate">
-                            Ange Koffi
+                            {currentUser?.name || "Organisateur"}
                           </p>
                           <span className="rounded-full bg-happy-coral-100 text-happy-coral-700 px-1.5 py-0.2 text-[9px] font-bold">
                             Hôte
                           </span>
                         </div>
                         <p className="text-[11px] text-happy-ink-500 truncate">
-                          ange.koffi@example.ci
+                          {currentUser?.email || ""}
                         </p>
-                        <p className="text-[10px] text-emerald-700 font-semibold mt-0.5 flex items-center gap-1">
-                          <Phone className="h-2.5 w-2.5" /> +225 07 12 34 56 78
-                        </p>
+                        {currentUser?.phone && (
+                          <p className="text-[10px] text-emerald-700 font-semibold mt-0.5 flex items-center gap-1">
+                            <Phone className="h-2.5 w-2.5" /> {currentUser.phone}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -372,18 +428,29 @@ export function DashboardHeader() {
                       <Crown className="h-4 w-4 text-amber-500 fill-amber-500" />
                       <span>Forfaits & Offre Pro</span>
                     </Link>
+
+                    {currentUser?.role === "ADMIN" && (
+                      <Link
+                        href="/admin"
+                        onClick={() => setProfileOpen(false)}
+                        className="flex items-center gap-2.5 rounded-xl p-2.5 font-bold text-red-700 bg-red-50 hover:bg-red-100 transition-colors"
+                      >
+                        <ShieldCheck className="h-4 w-4 text-red-600" />
+                        <span>Super-Admin Back-Office</span>
+                      </Link>
+                    )}
                   </div>
 
                   {/* Logout link */}
                   <div className="mt-2 pt-2 border-t border-happy-ink-100">
-                    <Link
-                      href="/login"
-                      onClick={() => setProfileOpen(false)}
-                      className="flex items-center gap-2 rounded-xl p-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors"
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="w-full flex items-center gap-2 rounded-xl p-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors text-left"
                     >
                       <LogOut className="h-3.5 w-3.5" />
                       <span>Se déconnecter</span>
-                    </Link>
+                    </button>
                   </div>
                 </div>
               </>
@@ -431,24 +498,24 @@ export function DashboardHeader() {
               <div className="p-3.5 rounded-2xl bg-gradient-to-br from-happy-sand-100 via-[#FFF9F5] to-amber-50 border border-happy-sand-200">
                 <div className="flex items-center gap-3">
                   <Avatar
-                    name="Ange Koffi"
+                    name={currentUser?.name || "Organisateur"}
                     size="md"
-                    src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80"
+                    src={currentUser?.avatar || undefined}
                   />
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
                       <h4 className="text-sm font-black text-happy-ink-900 truncate">
-                        Ange Koffi
+                        {currentUser?.name || "Organisateur"}
                       </h4>
                       <span className="rounded-full bg-happy-coral-100 text-happy-coral-800 px-1.5 py-0.5 text-[9px] font-bold">
                         Hôte
                       </span>
                     </div>
                     <p className="text-[11px] text-happy-ink-500 truncate">
-                      ange.koffi@example.ci
+                      {currentUser?.email || ""}
                     </p>
                     <p className="text-[10px] text-emerald-700 font-bold mt-0.5">
-                      ✓ Organisateur Principal
+                      ✓ Espace Organisateur
                     </p>
                   </div>
                 </div>
@@ -536,6 +603,22 @@ export function DashboardHeader() {
                   <ExternalLink className="h-3.5 w-3.5 text-happy-coral-500" />
                 </Link>
               </div>
+
+              {currentUser?.role === "ADMIN" && (
+                <div className="pt-1">
+                  <Link
+                    href="/admin"
+                    onClick={() => setMobileDrawerOpen(false)}
+                    className="flex items-center justify-between p-3 rounded-xl bg-red-50 hover:bg-red-100 text-xs font-bold text-red-700 border border-red-200"
+                  >
+                    <span className="flex items-center gap-2">
+                      <ShieldCheck className="h-4 w-4 text-red-600" />
+                      Super-Admin Back-Office
+                    </span>
+                    <ExternalLink className="h-3.5 w-3.5 text-red-600" />
+                  </Link>
+                </div>
+              )}
             </div>
 
             {/* Bottom Upgrade Callout & Logout */}
@@ -557,14 +640,14 @@ export function DashboardHeader() {
                 Paiements Mobile Money Wave & Orange Money acceptés.
               </p>
 
-              <Link
-                href="/login"
-                onClick={() => setMobileDrawerOpen(false)}
+              <button
+                type="button"
+                onClick={handleLogout}
                 className="flex items-center gap-2 pt-2 text-xs font-semibold text-rose-600 hover:underline"
               >
                 <LogOut className="h-3.5 w-3.5" />
                 <span>Se déconnecter</span>
-              </Link>
+              </button>
             </div>
           </div>
         </div>
