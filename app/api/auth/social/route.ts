@@ -34,8 +34,31 @@ export async function POST(req: NextRequest) {
     // 2. Find existing user or create a new one
     let user = store.getUserByEmail(email);
 
-    if (!user) {
-      // Create new user automatically from Google / Facebook profile
+    if (user) {
+      // Security Guard: Prevent account takeover of password-protected or admin accounts
+      if (user.role === "ADMIN" || user.passwordHash) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: {
+              code: "ACCOUNT_PROTECTED",
+              message:
+                "Un compte sécurisé existe déjà avec cette adresse email. Veuillez vous connecter avec votre mot de passe habituel.",
+            },
+          },
+          { status: 403 }
+        );
+      }
+
+      // Update avatar or name if previously missing on existing social account
+      const updates: any = {};
+      if (!user.avatar && avatar) updates.avatar = avatar;
+      if (!user.name && name) updates.name = name;
+      if (Object.keys(updates).length > 0) {
+        user = store.updateUser(user.id, updates) || user;
+      }
+    } else {
+      // Create new social user automatically
       const derivedName =
         name ||
         email
@@ -51,14 +74,6 @@ export async function POST(req: NextRequest) {
         role: "OWNER",
         passwordHash: null, // Social SSO account
       });
-    } else {
-      // Update avatar or name if previously missing
-      const updates: any = {};
-      if (!user.avatar && avatar) updates.avatar = avatar;
-      if (!user.name && name) updates.name = name;
-      if (Object.keys(updates).length > 0) {
-        user = store.updateUser(user.id, updates) || user;
-      }
     }
 
     // 3. Generate cryptographic signed session token

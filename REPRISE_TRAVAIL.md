@@ -64,12 +64,41 @@
   - `GET /api/admin/users`, `PATCH`, `DELETE` : Annuaire complet, modification de rôles, suppression.
   - `GET /api/admin/events` : Supervision de tous les événements créés, statistiques par cérémonie, liens vers les pass.
   - `GET /api/admin/system` & `POST` : Diagnostic de santé Supabase et réplication globale en 1 clic.
-- **Command Center Dédié (`/admin`)** :
+- Command Center Dédié (`/admin`) :
   - Thème sombre de supervision avec 5 indicateurs géants et flux d'audit en temps réel.
   - Annuaire des organisateurs avec recherche multi-critères.
   - Vue panoramique de tous les événements.
   - Diagnostic de santé Supabase et déclencheur de synchronisation.
   - Passerelle rapide entre l'Espace Organisateur et le Back-Office Super-Admin.
+
+### 6. Audit Approfondi & Durcissement de Sécurité (Octobre 2026)
+- **Rapport d'audit complet (20 vulnérabilités classées OWASP / CVSS v3.1)** généré dans l'artéfact `audit_securite_complet.md`.
+- **Élimination du bypass de session** : Suppression de l'acceptation non signée des cookies `usr_*` dans `lib/auth/security.ts`.
+- **RBAC Super-Admin strict** : Suppression de l'élévation par préfixe d'email `admin@*` dans `lib/auth/session.ts` ; seul le rôle `ADMIN` est autorisé.
+- **Protection contre le Social Account Takeover** : Blocage de toute connexion par email non vérifié vers un compte protégé par mot de passe ou Super-Admin dans `app/api/auth/social/route.ts`.
+- **Désactivation de la porte dérobée `isDemo`** en production (`app/api/auth/login/route.ts`).
+- **Suppression des identifiants PostgreSQL en clair** dans `lib/db/postgres.ts` et bascule vers un pool de connexions persistant `pg.Pool`.
+- **Protection IDOR & vol de QR tokens** dans `lib/rsvp/index.ts` avec vérification stricte de l'appartenance de l'invité à l'événement (`eventId`).
+- **Génération cryptographique (CSPRNG)** des identifiants et tokens de billets via `crypto.randomBytes(12)` dans `lib/db/store.ts`.
+- **Authentification des endpoints de check-in** : Protection de `GET /api/checkin` et `POST /api/checkin` par session valide.
+- **Protection contre les redirections ouvertes (Open Redirect)** dans `app/(public)/login/page.tsx`.
+
+### 7. Résolution des Risques d'Architecture Système (Agent Architect — Octobre 2026)
+- **Check-in Atomique & Anti-Fraude Concurrente (`lib/checkin/index.ts`)** :
+  - Verrou de ligne SQL atomique (`UPDATE "guests" SET "checkedIn" = true WHERE "qrToken" = $1 AND "checkedIn" = false RETURNING *`).
+  - Élimination mathématique de toute *race condition* même en cas de scan multi-hôtesses à la même milliseconde.
+  - Détection anti-fraude avec message d'alerte explicite détaillant l'heure du premier scan et l'agent responsable.
+- **Hydratation & Résilience Serverless Supabase (`lib/db/store.ts`, `lib/db/sync.ts`, `lib/db/postgres.ts`)** :
+  - Hydratation asynchrone automatique du cache applicatif depuis Supabase PostgreSQL (`fetchStoreFromPostgres`).
+  - Gestion sécurisée des environnements de fichiers en lecture seule (Vercel / AWS Lambda).
+  - Reconnexion automatique avec retry en cas de déconnexion du pooler transactionnel Supabase PgBouncer.
+- **Limiteur de Débit Glissant (Sliding Window Rate Limiting)** :
+  - Module haute performance dédié [lib/security/rate-limit.ts](file:///c:/Users/HD/.antigravity-ide/happy/lib/security/rate-limit.ts) avec nettoyage périodique automatique.
+  - Protection active sur `/api/auth/login` (5 req/min), `/api/checkin` (120 req/min), et `/api/rsvp` (15 req/min).
+  - En-têtes HTTP standards `X-RateLimit-*` et code `429 Too Many Requests` avec délai de récupération `Retry-After`.
+- **Intégration de l'Écosystème ECC (Everything Claude Code)** :
+  - Installation complète du dépôt source dans [ECC/](file:///c:/Users/HD/.antigravity-ide/happy/ECC) (isolé dans [.gitignore](file:///c:/Users/HD/.antigravity-ide/happy/.gitignore)).
+  - Déploiement de 68 agents, 119 skills et 94 workflows de développement dans [.agents/](file:///c:/Users/HD/.antigravity-ide/happy/.agents).
 
 ---
 

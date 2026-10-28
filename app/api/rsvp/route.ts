@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { submitPublicRsvp } from "@/lib/rsvp";
+import { checkRateLimit, createRateLimitResponse } from "@/lib/security/rate-limit";
 
 export async function POST(req: NextRequest) {
   try {
+    const rateLimit = checkRateLimit(req, { limit: 15, windowSec: 60, prefix: "api:rsvp" });
+    if (!rateLimit.success) {
+      return createRateLimitResponse(rateLimit, "Trop de réponses envoyées. Veuillez patienter un instant.");
+    }
+
     const body = await req.json();
     const { slug, ...rsvpData } = body;
 

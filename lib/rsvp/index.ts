@@ -41,7 +41,11 @@ export async function submitPublicRsvp(
   // Find existing guest by ID or phone number
   let guest: Guest | null = null;
   if (input.guestId) {
-    guest = store.getGuestById(input.guestId);
+    const candidate = store.getGuestById(input.guestId);
+    // Strict multi-tenant isolation: guest must belong to the current event
+    if (candidate && candidate.eventId === event.id) {
+      guest = candidate;
+    }
   }
 
   if (!guest && normalizedPhone) {

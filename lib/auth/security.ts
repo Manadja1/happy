@@ -9,7 +9,14 @@ const DEFAULT_AUTH_SECRET = "happy-events-secure-vault-key-ci-2026-very-secret-p
  * Priority: NEXTAUTH_SECRET -> fallback string.
  */
 function getAuthSecret(): string {
-  return process.env.NEXTAUTH_SECRET || DEFAULT_AUTH_SECRET;
+  const secret = process.env.NEXTAUTH_SECRET;
+  if (!secret) {
+    if ((process.env.NODE_ENV as string) === "production") {
+      throw new Error("SECURITY_ERROR: Variable d'environnement NEXTAUTH_SECRET obligatoire en production");
+    }
+    return DEFAULT_AUTH_SECRET;
+  }
+  return secret;
 }
 
 /**
@@ -63,11 +70,6 @@ export function signSessionToken(userId: string): string {
  */
 export function verifySessionToken(token?: string | null): string | null {
   if (!token || typeof token !== "string") return null;
-
-  // Backwards compatibility with legacy plain userId cookies during migration
-  if (token.startsWith("usr_") && !token.includes(":")) {
-    return token;
-  }
 
   try {
     const parts = token.split(":");

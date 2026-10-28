@@ -8,16 +8,35 @@ import {
   signSessionToken,
   sanitizeUser,
 } from "@/lib/auth/security";
+import { checkRateLimit, createRateLimitResponse } from "@/lib/security/rate-limit";
 
 export async function POST(req: NextRequest) {
   try {
+    const rateLimit = checkRateLimit(req, { limit: 5, windowSec: 60, prefix: "auth:login" });
+    if (!rateLimit.success) {
+      return createRateLimitResponse(rateLimit, "Trop de tentatives de connexion. Veuillez patienter une minute avant de réessayer.");
+    }
+
     const body = await req.json();
     const isDemo = Boolean(body.isDemo);
     const identifier = (body.email || body.phone || body.identifier || "").trim();
     const password = body.password || "";
 
-    // 1. Direct Demo Account Login
+    // 1. Direct Demo Account Login (Strictly prohibited in production)
     if (isDemo) {
+      if ((process.env.NODE_ENV as string) === "production") {
+        return NextResponse.json(
+          {
+            success: false,
+            error: {
+              code: "FORBIDDEN",
+              message: "L'accès démo automatique est désactivé en production pour des raisons de sécurité.",
+            },
+          },
+          { status: 403 }
+        );
+      }
+
       let demoUser = store.getUserById("usr_demo_abidjan_01");
       if (!demoUser) {
         demoUser = store.createUser({
@@ -35,7 +54,7 @@ export async function POST(req: NextRequest) {
       const cookieStore = cookies();
       cookieStore.set(SESSION_COOKIE_NAME, token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
+        secure: (process.env.NODE_ENV as string) === "production",
         sameSite: "lax",
         path: "/",
         maxAge: 60 * 60 * 24 * 30, // 30 days
@@ -111,9 +130,9 @@ export async function POST(req: NextRequest) {
         );
       }
     } else {
-      // Legacy user without password (e.g. initial demo account)
-      if (user.id === "usr_demo_abidjan_01") {
-        if (password === "HappyEvents2026!" || password === "demo" || password.length >= 6) {
+      // Accounts without a passwordHash (e.g. Social SSO or initial seed)
+      if (user.id === "usr_demo_abidjan_01" && (process.env.NODE_ENV as string) !== "production") {
+        if (password === "HappyEvents2026!" || password === "demo") {
           store.updateUser(user.id, { passwordHash: hashPassword(password) });
         } else {
           return NextResponse.json(
@@ -128,8 +147,18 @@ export async function POST(req: NextRequest) {
           );
         }
       } else {
-        // First login with password sets password
-        store.updateUser(user.id, { passwordHash: hashPassword(password) });
+        // Prevent arbitrary password creation and account takeover
+        return NextResponse.json(
+          {
+            success: false,
+            error: {
+              code: "SSO_ACCOUNT_PASSWORD_REQUIRED",
+              message:
+                "Ce compte est associé à un profil tiers et n'a pas de mot de passe défini. Veuillez vous connecter avec le bouton associé ou demander une réinitialisation.",
+            },
+          },
+          { status: 400 }
+        );
       }
     }
 
@@ -140,7 +169,7 @@ export async function POST(req: NextRequest) {
     const cookieStore = cookies();
     cookieStore.set(SESSION_COOKIE_NAME, token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: (process.env.NODE_ENV as string) === "production",
       sameSite: "lax",
       path: "/",
       maxAge: 60 * 60 * 24 * 30, // 30 days

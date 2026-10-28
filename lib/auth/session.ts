@@ -74,11 +74,7 @@ export async function assertEventAccess(
  */
 export function isAdminUser(user: User | null): boolean {
   if (!user) return false;
-  return (
-    user.role === "ADMIN" ||
-    user.email === "ange.koffi@happyevents.ci" ||
-    user.email?.startsWith("admin@")
-  );
+  return user.role === "ADMIN";
 }
 
 /**

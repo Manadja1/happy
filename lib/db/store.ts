@@ -1,4 +1,5 @@
 import fs from "fs";
+import crypto from "crypto";
 import path from "path";
 import {
   Event,
@@ -20,6 +21,7 @@ import {
   syncRsvpToPostgres,
   syncInvitationToPostgres,
   syncCheckinToPostgres,
+  fetchStoreFromPostgres,
 } from "./sync";
 
 interface DataStoreSchema {
@@ -313,9 +315,37 @@ const INITIAL_INVITATIONS: Invitation[] = [
 
 class MemoryStore {
   private data: DataStoreSchema;
+  private isHydrated: boolean = false;
 
   constructor() {
     this.data = this.loadFromFile();
+    // Non-blocking asynchronous hydration from Supabase PostgreSQL
+    this.hydrateFromPostgres().catch(() => {});
+  }
+
+  /**
+   * Authoritatively hydrates the store from Supabase PostgreSQL if available.
+   */
+  async hydrateFromPostgres(): Promise<boolean> {
+    try {
+      const pgData = await fetchStoreFromPostgres();
+      if (pgData && pgData.users.length > 0) {
+        this.data = {
+          users: pgData.users,
+          events: pgData.events,
+          guests: pgData.guests,
+          rsvps: pgData.rsvps,
+          invitations: pgData.invitations,
+          checkins: pgData.checkins,
+        };
+        this.isHydrated = true;
+        this.saveToFile(this.data);
+        return true;
+      }
+    } catch (err: any) {
+      console.warn(`[MemoryStore Hydration Skipped] ${err.message}`);
+    }
+    return false;
   }
 
   private loadFromFile(): DataStoreSchema {
@@ -412,7 +442,7 @@ class MemoryStore {
   }
 
   createUser(user: Omit<User, "id" | "createdAt" | "updatedAt">): User {
-    const id = "usr_" + Math.random().toString(36).substring(2, 9);
+    const id = "usr_" + crypto.randomBytes(6).toString("hex");
     const newUser: User = {
       ...user,
       id,
@@ -506,8 +536,8 @@ class MemoryStore {
   }
 
   createGuest(guest: Omit<Guest, "id" | "qrToken" | "checkedIn" | "createdAt" | "updatedAt">): Guest {
-    const id = "gst_" + Math.random().toString(36).substring(2, 9);
-    const qrToken = "tok_" + Math.random().toString(36).substring(2, 12);
+    const id = "gst_" + crypto.randomBytes(6).toString("hex");
+    const qrToken = "tok_" + crypto.randomBytes(12).toString("hex");
     const newGuest: Guest = {
       ...guest,
       id,
@@ -528,8 +558,8 @@ class MemoryStore {
   ): Guest[] {
     const created: Guest[] = [];
     for (const item of rawList) {
-      const id = "gst_" + Math.random().toString(36).substring(2, 9);
-      const qrToken = "tok_" + Math.random().toString(36).substring(2, 12);
+      const id = "gst_" + crypto.randomBytes(6).toString("hex");
+      const qrToken = "tok_" + crypto.randomBytes(12).toString("hex");
       const newGuest: Guest = {
         ...item,
         id,

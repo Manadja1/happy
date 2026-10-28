@@ -1,8 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getCurrentSession } from "@/lib/auth/session";
 import { verifyQrToken, confirmGuestCheckin } from "@/lib/checkin";
+import { checkRateLimit, createRateLimitResponse } from "@/lib/security/rate-limit";
 
 export async function GET(req: NextRequest) {
   try {
+    const session = await getCurrentSession();
+    if (!session.isAuthenticated || !session.user) {
+      return NextResponse.json(
+        { success: false, error: { code: "UNAUTHORIZED", message: "Connexion requise pour inspecter un pass" } },
+        { status: 401 }
+      );
+    }
+
     const { searchParams } = new URL(req.url);
     const token = searchParams.get("token") || searchParams.get("qrToken");
 
@@ -25,6 +35,19 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const rateLimit = checkRateLimit(req, { limit: 120, windowSec: 60, prefix: "api:checkin" });
+    if (!rateLimit.success) {
+      return createRateLimitResponse(rateLimit, "Trop de requêtes de scan. Veuillez ralentir la cadence.");
+    }
+
+    const session = await getCurrentSession();
+    if (!session.isAuthenticated || !session.user) {
+      return NextResponse.json(
+        { success: false, error: { code: "UNAUTHORIZED", message: "Connexion requise pour valider un pass d'entrée" } },
+        { status: 401 }
+      );
+    }
+
     const body = await req.json();
     const { token, qrToken, agentId } = body;
     const finalToken = token || qrToken;
@@ -36,9 +59,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const operatorId = session.user.name || session.user.email || agentId || "agent_mobile_gate";
     const result = await confirmGuestCheckin(
       finalToken,
-      agentId || "agent_mobile_gate"
+      operatorId
     );
 
     if (!result.success) {

@@ -195,3 +195,70 @@ export async function syncCheckinToPostgres(chk: Checkin): Promise<void> {
     console.warn(`[Sync Checkin Failed]`, err.message);
   }
 }
+
+/**
+ * Loads entire datasets from Supabase PostgreSQL to hydrate the local application cache.
+ */
+export async function fetchStoreFromPostgres(): Promise<{
+  users: User[];
+  events: Event[];
+  guests: Guest[];
+  rsvps: RSVP[];
+  invitations: Invitation[];
+  checkins: Checkin[];
+} | null> {
+  try {
+    const [uRows, eRows, gRows, rRows, iRows, cRows] = await Promise.all([
+      queryPostgres(`SELECT * FROM "users"`),
+      queryPostgres(`SELECT * FROM "events"`),
+      queryPostgres(`SELECT * FROM "guests"`),
+      queryPostgres(`SELECT * FROM "rsvps"`),
+      queryPostgres(`SELECT * FROM "invitations"`),
+      queryPostgres(`SELECT * FROM "checkins"`),
+    ]);
+
+    if (!uRows || uRows.length === 0) {
+      return null;
+    }
+
+    const reviveDate = (d: any) => (d ? new Date(d) : d);
+
+    return {
+      users: uRows.map((u: any) => ({
+        ...u,
+        createdAt: reviveDate(u.createdAt),
+        updatedAt: reviveDate(u.updatedAt),
+      })),
+      events: eRows.map((e: any) => ({
+        ...e,
+        date: reviveDate(e.date),
+        createdAt: reviveDate(e.createdAt),
+        updatedAt: reviveDate(e.updatedAt),
+      })),
+      guests: gRows.map((g: any) => ({
+        ...g,
+        checkedIn: Boolean(g.checkedIn),
+        createdAt: reviveDate(g.createdAt),
+        updatedAt: reviveDate(g.updatedAt),
+      })),
+      rsvps: rRows.map((r: any) => ({
+        ...r,
+        respondedAt: reviveDate(r.respondedAt),
+      })),
+      invitations: iRows.map((i: any) => ({
+        ...i,
+        themeConfig: typeof i.themeConfig === "string" ? JSON.parse(i.themeConfig) : (i.themeConfig || {}),
+        publishedAt: reviveDate(i.publishedAt),
+        createdAt: reviveDate(i.createdAt),
+        updatedAt: reviveDate(i.updatedAt),
+      })),
+      checkins: cRows.map((c: any) => ({
+        ...c,
+        checkedInAt: reviveDate(c.checkedInAt),
+      })),
+    };
+  } catch (err: any) {
+    console.warn("[Postgres Fetch Store Failed]", err.message);
+    return null;
+  }
+}
