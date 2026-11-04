@@ -3,14 +3,24 @@ import { cookies } from "next/headers";
 import { store } from "@/lib/db/store";
 import { SESSION_COOKIE_NAME } from "@/lib/auth/session";
 import { hashPassword, signSessionToken, sanitizeUser } from "@/lib/auth/security";
+import { checkRateLimit, createRateLimitResponse } from "@/lib/security/rate-limit";
 
 export async function POST(req: NextRequest) {
   try {
+    // 0. Rate limit account creation to prevent automated account flooding
+    const rateLimit = checkRateLimit(req, { limit: 5, windowSec: 60, prefix: "auth:register" });
+    if (!rateLimit.success) {
+      return createRateLimitResponse(
+        rateLimit,
+        "Trop de tentatives d'inscription. Veuillez patienter une minute avant de réessayer."
+      );
+    }
+
     const body = await req.json();
-    const name = (body.name || body.fullName || "").trim();
-    const email = (body.email || "").trim().toLowerCase();
-    const phone = (body.phone || body.whatsapp || "").trim();
-    const password = body.password || "";
+    const name = String(body.name || body.fullName || "").trim().slice(0, 120);
+    const email = String(body.email || "").trim().toLowerCase();
+    const phone = String(body.phone || body.whatsapp || "").trim().slice(0, 40);
+    const password = String(body.password || "");
 
     // 1. Validate name
     if (!name || name.length < 2) {
@@ -104,9 +114,9 @@ export async function POST(req: NextRequest) {
       },
       { status: 201 }
     );
-  } catch (err: any) {
+  } catch {
     return NextResponse.json(
-      { success: false, error: { code: "SERVER_ERROR", message: err.message || "Erreur interne" } },
+      { success: false, error: { code: "SERVER_ERROR", message: "Erreur interne lors de l'inscription" } },
       { status: 500 }
     );
   }

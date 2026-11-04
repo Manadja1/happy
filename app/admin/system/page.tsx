@@ -148,6 +148,21 @@ export default function AdminSystemPage() {
               <span className="text-happy-ink-400">Pooler IPv4 Port :</span>
               <span className="text-white font-mono">5432 (Transaction Mode)</span>
             </div>
+            <div className="flex justify-between items-center pt-1 border-t border-happy-ink-800/60">
+              <span className="text-happy-ink-400 flex items-center gap-1">
+                <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
+                Row-Level Security (RLS) :
+              </span>
+              <span
+                className={`font-mono font-bold ${
+                  pg.rls?.allProtected ? "text-emerald-400" : "text-amber-400"
+                }`}
+              >
+                {pg.rls?.allProtected
+                  ? `ACTIF (${pg.rls.protectedTables}/${pg.rls.totalTables} tables)`
+                  : "VERROUILLÉ"}
+              </span>
+            </div>
           </div>
         </div>
 

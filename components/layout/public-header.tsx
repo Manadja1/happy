@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { Sparkles, Menu, X, ArrowRight, Globe } from "lucide-react";
+import { Sparkles, Menu, X, ArrowRight, Globe, Compass } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function PublicHeader() {
@@ -12,7 +12,7 @@ export function PublicHeader() {
     <header className="sticky top-0 z-40 w-full border-b border-happy-ink-100/80 bg-white/80 backdrop-blur-md transition-all">
       <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Brand Logo & Navigation Group with Protected Spacing */}
-        <div className="flex items-center gap-6 xl:gap-12 shrink-0">
+        <div className="flex items-center gap-6 xl:gap-10 shrink-0">
           <Link href="/" className="flex items-center gap-2.5 group shrink-0">
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-happy-coral-500 to-amber-500 text-white shadow-soft group-hover:scale-105 transition-transform duration-200">
               <Sparkles className="h-5 w-5 fill-white/20" />
@@ -28,7 +28,7 @@ export function PublicHeader() {
           </Link>
 
           {/* Desktop Navigation Links — Strictly single-line with whitespace-nowrap */}
-          <nav className="hidden lg:flex items-center gap-1 xl:gap-2 text-[13px] xl:text-sm font-semibold text-happy-ink-700 shrink-0">
+          <nav className="hidden lg:flex items-center gap-1 xl:gap-1.5 text-[13px] xl:text-sm font-semibold text-happy-ink-700 shrink-0">
             <Link
               href="/#features"
               className="px-3 py-1.5 rounded-xl whitespace-nowrap text-happy-ink-800 hover:text-happy-coral-600 hover:bg-happy-sand-100/80 transition-all duration-150"
@@ -45,7 +45,7 @@ export function PublicHeader() {
               href="/templates"
               className="px-3 py-1.5 rounded-xl whitespace-nowrap text-happy-ink-800 hover:text-happy-coral-600 hover:bg-happy-sand-100/80 transition-all duration-150"
             >
-              Modèles d'invitations
+              Modèles d&apos;invitations
             </Link>
             <Link
               href="/pricing"
@@ -53,6 +53,14 @@ export function PublicHeader() {
             >
               Tarifs
             </Link>
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent("open-guided-tour"))}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl whitespace-nowrap text-happy-coral-600 bg-happy-coral-50/90 hover:bg-happy-coral-100 font-bold transition-all duration-150"
+            >
+              <Compass className="h-3.5 w-3.5 text-happy-coral-500" />
+              <span>Visite guidée</span>
+            </button>
           </nav>
         </div>
 
@@ -152,6 +160,17 @@ export function PublicHeader() {
             >
               Tarifs
             </Link>
+            <button
+              type="button"
+              onClick={() => {
+                setMobileMenuOpen(false);
+                window.dispatchEvent(new CustomEvent("open-guided-tour"));
+              }}
+              className="flex items-center gap-2 text-base font-bold text-happy-coral-600 text-left"
+            >
+              <Compass className="h-4 w-4 text-happy-coral-500" />
+              <span>Lancer la visite guidée interactive</span>
+            </button>
             <div className="pt-4 flex flex-col gap-3">
               <div className="grid grid-cols-2 gap-2">
                 <Link href="/login" onClick={() => setMobileMenuOpen(false)}>

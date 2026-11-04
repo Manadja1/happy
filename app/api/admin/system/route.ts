@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { assertAdminAccess } from "@/lib/auth/session";
-import { checkPostgresHealth, testPostgresPooler } from "@/lib/db/postgres";
+import {
+  checkPostgresHealth,
+  testPostgresPooler,
+  checkRlsStatus,
+  enforceRlsOnAllTables,
+} from "@/lib/db/postgres";
 import { store } from "@/lib/db/store";
 import {
   syncUserToPostgres,
@@ -16,9 +21,10 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   try {
     await assertAdminAccess();
-    const [health, pooler] = await Promise.all([
+    const [health, pooler, rls] = await Promise.all([
       checkPostgresHealth(),
       testPostgresPooler(),
+      checkRlsStatus(),
     ]);
 
     const users = store.getAllUsers();
@@ -33,8 +39,9 @@ export async function GET() {
         postgres: {
           health,
           pooler,
-          region: "eu-west-1 (Irlande)",
-          projectRef: "zjjwpayjcpiieicneoqx",
+          rls,
+          region: process.env.SUPABASE_REGION || "eu-west-1 (Irlande)",
+          projectRef: process.env.SUPABASE_PROJECT_REF || "supabase-cluster",
         },
         counts: {
           users: users.length,
@@ -69,7 +76,12 @@ export async function POST() {
     const checkins = store.getAllCheckins();
     const rsvps = store.getAllRsvps();
 
-    // Trigger sync for all entities
+    // Enforce Row-Level Security (RLS) on all public tables + trigger sync
+    const rlsResult = await enforceRlsOnAllTables().catch(() => ({
+      success: false,
+      securedTables: [],
+    }));
+
     users.forEach((u) => syncUserToPostgres(u));
     events.forEach((e) => syncEventToPostgres(e));
     guests.forEach((g) => syncGuestToPostgres(g));
@@ -78,7 +90,8 @@ export async function POST() {
 
     return NextResponse.json({
       success: true,
-      message: "Synchronisation globale vers Supabase PostgreSQL déclenchée avec succès",
+      message: "Synchronisation globale et sécurisation RLS Supabase exécutées avec succès",
+      rlsSecuredTables: rlsResult.securedTables,
       syncedCounts: {
         users: users.length,
         events: events.length,

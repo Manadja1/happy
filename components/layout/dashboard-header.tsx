@@ -25,6 +25,7 @@ import {
   Phone,
   Mail,
   ShieldCheck,
+  Compass,
 } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -255,8 +256,18 @@ export function DashboardHeader() {
           </div>
         </div>
 
-        {/* Right Side: Public Page, Notifications, Profile Dropdown */}
+        {/* Right Side: Guided Tour, Public Page, Notifications, Profile Dropdown */}
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* Guided Tour Quick Trigger */}
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new CustomEvent("open-guided-tour"))}
+            className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-happy-coral-50 border border-happy-coral-200/80 text-xs font-bold text-happy-coral-700 hover:bg-happy-coral-100 transition-colors"
+          >
+            <Compass className="h-3.5 w-3.5 text-happy-coral-500" />
+            <span>Visite guidée</span>
+          </button>
+
           {/* Public Page Quick Button */}
           <Link
             href={`/e/${currentEvent.slug}`}
@@ -592,7 +603,21 @@ export function DashboardHeader() {
               </nav>
 
               {/* Quick Public Page link */}
-              <div className="pt-2">
+              <div className="pt-2 space-y-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileDrawerOpen(false);
+                    window.dispatchEvent(new CustomEvent("open-guided-tour"));
+                  }}
+                  className="w-full flex items-center justify-between p-3 rounded-xl bg-happy-coral-50 hover:bg-happy-coral-100 border border-happy-coral-200/60 text-xs font-bold text-happy-coral-700"
+                >
+                  <span className="flex items-center gap-2">
+                    <Compass className="h-4 w-4 text-happy-coral-500" />
+                    Visite guidée interactive
+                  </span>
+                  <Sparkles className="h-3.5 w-3.5 text-happy-coral-500" />
+                </button>
                 <Link
                   href={`/e/${currentEvent.slug}`}
                   target="_blank"

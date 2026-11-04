@@ -7,16 +7,16 @@ export async function GET(
 ) {
   try {
     const event = await getPublicEvent(params.slug);
-    if (!event) {
+    if (!event || event.status !== "PUBLISHED") {
       return NextResponse.json(
-        { success: false, error: { code: "NOT_FOUND", message: "Événement introuvable" } },
+        { success: false, error: { code: "NOT_FOUND", message: "Événement introuvable ou non publié" } },
         { status: 404 }
       );
     }
     return NextResponse.json({ success: true, data: event });
-  } catch (err: any) {
+  } catch {
     return NextResponse.json(
-      { success: false, error: { code: "SERVER_ERROR", message: err.message } },
+      { success: false, error: { code: "SERVER_ERROR", message: "Impossible de charger l'événement" } },
       { status: 500 }
     );
   }

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { GuidedTour } from "@/components/tour/guided-tour";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -59,6 +60,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen bg-[#FAF8F5] text-[#0F172A] antialiased">
         {children}
+        <GuidedTour />
       </body>
     </html>
   );

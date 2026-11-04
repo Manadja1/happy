@@ -20,14 +20,14 @@ export async function GET() {
       },
       timestamp: new Date().toISOString(),
     });
-  } catch (err: any) {
+  } catch {
     return NextResponse.json(
       {
         status: "degraded",
         database: {
           provider: "Supabase PostgreSQL",
           status: "DISCONNECTED",
-          error: err.message,
+          error: "Service de base de données momentanément indisponible",
         },
         timestamp: new Date().toISOString(),
       },

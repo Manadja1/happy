@@ -37,16 +37,27 @@ export interface RateLimitResult {
 }
 
 /**
- * Extracts client IP address safely from standard headers
+ * Extracts client IP address safely from trusted edge/platform headers first,
+ * preventing trivial X-Forwarded-For spoofing.
  */
 export function getClientIp(req: NextRequest): string {
+  // 1. Prefer immutable platform-injected headers (Cloudflare / Vercel Edge)
+  const cfIp = req.headers.get("cf-connecting-ip");
+  if (cfIp) return cfIp.trim().slice(0, 64);
+
+  const vercelIp = req.headers.get("x-vercel-forwarded-for");
+  if (vercelIp) return vercelIp.split(",")[0].trim().slice(0, 64);
+
+  const realIp = req.headers.get("x-real-ip");
+  if (realIp) return realIp.trim().slice(0, 64);
+
+  // 2. Fallback: take the last hop in X-Forwarded-For (closest to reverse proxy)
   const forwarded = req.headers.get("x-forwarded-for");
   if (forwarded) {
-    return forwarded.split(",")[0].trim();
-  }
-  const realIp = req.headers.get("x-real-ip");
-  if (realIp) {
-    return realIp.trim();
+    const ips = forwarded.split(",").map((s) => s.trim()).filter(Boolean);
+    if (ips.length > 0) {
+      return ips[ips.length - 1].slice(0, 64);
+    }
   }
   return "127.0.0.1";
 }

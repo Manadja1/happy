@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentSession } from "@/lib/auth/session";
+import { getCurrentSession, assertEventAccess, isAdminUser } from "@/lib/auth/session";
 import { verifyQrToken, confirmGuestCheckin } from "@/lib/checkin";
 import { checkRateLimit, createRateLimitResponse } from "@/lib/security/rate-limit";
 
@@ -24,10 +24,29 @@ export async function GET(req: NextRequest) {
     }
 
     const verification = await verifyQrToken(token);
+
+    // Enforce multi-tenant event ownership: only the event owner, a CHECKIN_AGENT, or an ADMIN can inspect this pass
+    if (verification.guest?.eventId && !isAdminUser(session.user) && session.user.role !== "CHECKIN_AGENT") {
+      try {
+        await assertEventAccess(session.user.id, verification.guest.eventId);
+      } catch {
+        return NextResponse.json(
+          {
+            success: false,
+            error: {
+              code: "FORBIDDEN",
+              message: "Ce pass appartient à un événement dont vous n'êtes pas l'organisateur.",
+            },
+          },
+          { status: 403 }
+        );
+      }
+    }
+
     return NextResponse.json({ success: true, data: verification });
-  } catch (err: any) {
+  } catch {
     return NextResponse.json(
-      { success: false, error: { code: "SERVER_ERROR", message: err.message } },
+      { success: false, error: { code: "SERVER_ERROR", message: "Erreur lors de la vérification du pass" } },
       { status: 500 }
     );
   }
@@ -59,11 +78,27 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // 1. Pre-verify token ownership before mutating check-in state
+    const preCheck = await verifyQrToken(finalToken);
+    if (preCheck.guest?.eventId && !isAdminUser(session.user) && session.user.role !== "CHECKIN_AGENT") {
+      try {
+        await assertEventAccess(session.user.id, preCheck.guest.eventId);
+      } catch {
+        return NextResponse.json(
+          {
+            success: false,
+            error: {
+              code: "FORBIDDEN",
+              message: "Accès refusé : vous n'êtes pas autorisé à scanner des billets pour cet événement.",
+            },
+          },
+          { status: 403 }
+        );
+      }
+    }
+
     const operatorId = session.user.name || session.user.email || agentId || "agent_mobile_gate";
-    const result = await confirmGuestCheckin(
-      finalToken,
-      operatorId
-    );
+    const result = await confirmGuestCheckin(finalToken, operatorId);
 
     if (!result.success) {
       return NextResponse.json(
@@ -80,9 +115,9 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ success: true, data: result });
-  } catch (err: any) {
+  } catch {
     return NextResponse.json(
-      { success: false, error: { code: "SERVER_ERROR", message: err.message } },
+      { success: false, error: { code: "SERVER_ERROR", message: "Erreur lors de la validation du check-in" } },
       { status: 500 }
     );
   }
